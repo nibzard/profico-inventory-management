@@ -6,21 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ProfiCo Inventory Management System - A comprehensive inventory management solution for tracking hardware equipment and software subscriptions with role-based access, approval workflows, and compliance reporting.
 
-**Current Status**: Initial project setup phase. The Next.js application has not yet been initialized.
+**Current Status**: Next.js application initialized with App Router. Prisma schema implemented with comprehensive data models including NextAuth.js integration. Basic project structure established with shadcn/ui components.
 
 ## Architecture & Technology Stack
 
 ### Core Technologies
-- **Frontend**: Next.js 14+ with App Router, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 15+ with App Router, TypeScript, Tailwind CSS 4
 - **Backend**: Next.js API Routes with Server Actions
-- **Database**: SQLite with Turso for edge deployment, Prisma ORM
+- **Database**: SQLite with Prisma ORM (Turso for production)
 - **Authentication**: NextAuth.js v5 with role-based access control
-- **UI Components**: shadcn/ui with Radix UI primitives
-- **PWA**: next-pwa with offline-first caching strategy
-- **File Storage**: Uploadthing or AWS S3
-- **QR/Barcode**: @zxing/browser for equipment scanning
+- **UI Components**: shadcn/ui with Radix UI primitives (installed)
+- **Forms**: React Hook Form with Zod validation
+- **Styling**: Tailwind CSS with class-variance-authority
+- **Icons**: Lucide React
 
-### Target Architecture (Post-Setup)
+### Current Architecture
 ```
 src/
 ├── app/                     # Next.js App Router
@@ -53,39 +53,44 @@ src/
 
 ## Development Commands
 
-**Note**: These commands will be available after Next.js project initialization.
-
 ### Development
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
+npm run dev          # Start development server with Turbopack
+npm run build        # Build for production with Turbopack
 npm run start        # Start production server
 npm run lint         # Run ESLint
+npm run lint:fix     # Run ESLint with auto-fix
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting
 npm run typecheck    # Run TypeScript checks
 ```
 
 ### Database Operations
 ```bash
-npx prisma generate     # Generate Prisma client
-npx prisma db push      # Push schema to database
-npx prisma studio       # Open Prisma Studio
-npx prisma migrate dev  # Create and apply migration
+npm run db:generate  # Generate Prisma client
+npm run db:push      # Push schema to database
+npm run db:studio    # Open Prisma Studio
+npm run db:seed      # Run database seed script
+npx prisma migrate dev  # Create and apply migration (not aliased)
 ```
 
-### Testing
+### Code Quality
 ```bash
-npm test              # Run Jest unit tests
-npm run test:watch    # Run tests in watch mode
-npm run test:e2e      # Run Playwright e2e tests
+npx lint-staged      # Run pre-commit hooks (ESLint + Prettier)
+npm run prepare      # Setup Husky git hooks
 ```
+
+**Note**: Testing framework not yet configured. Will be added in Phase 2.
 
 ## Key Implementation Phases
 
-### Phase 1: Foundation (Current)
-- Project initialization with Next.js 14+ and TypeScript
-- Database schema design with Prisma
-- Authentication setup with NextAuth.js v5
-- Basic UI components with shadcn/ui
+### Phase 1: Foundation (Partially Complete)
+- ✅ Project initialization with Next.js 15+ and TypeScript
+- ✅ Database schema design with Prisma (comprehensive models)
+- ✅ Basic project structure with App Router
+- ✅ shadcn/ui components foundation
+- 🔄 Authentication setup with NextAuth.js v5 (schema ready)
+- 🔄 Basic UI components implementation
 
 ### Phase 2: Core Features
 - Equipment CRUD operations with lifecycle management
@@ -169,10 +174,11 @@ This project includes three custom subagents for specific workflows:
 
 ## Next Steps
 
-The immediate development priorities are outlined in todo.md Phase 1:
-1. Next.js project initialization (currently in progress)
-2. Tailwind CSS and project structure setup
-3. Prisma database schema implementation
-4. NextAuth.js authentication configuration
+The immediate development priorities are outlined in todo.md:
+1. ✅ Next.js project initialization
+2. ✅ Prisma database schema implementation
+3. 🔄 NextAuth.js authentication configuration
+4. 🔄 Basic UI components and layouts
+5. 🔄 Equipment management features
 
 Refer to todo.md for the complete 6-phase development roadmap with detailed task breakdowns and priority levels.

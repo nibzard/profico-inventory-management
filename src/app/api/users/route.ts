@@ -2,7 +2,7 @@
 // ABOUTME: Handles GET requests for user listing with filtering options
 
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {

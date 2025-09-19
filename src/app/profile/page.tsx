@@ -3,7 +3,7 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { db } from "@/lib/prisma";
 import { ProfileForm } from "@/components/profile/profile-form";
 import {
   Card,

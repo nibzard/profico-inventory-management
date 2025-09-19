@@ -3,7 +3,7 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { db } from "@/lib/prisma";
 import { EquipmentList } from "@/components/equipment/equipment-list";
 import { EquipmentFilters } from "@/components/equipment/equipment-filters";
 import { Button } from "@/components/ui/button";

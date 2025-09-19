@@ -2,7 +2,7 @@
 // ABOUTME: Handles equipment return workflow with condition tracking and history
 
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 

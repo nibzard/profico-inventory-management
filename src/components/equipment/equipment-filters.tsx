@@ -34,9 +34,9 @@ export function EquipmentFilters({
   const router = useRouter();
 
   const [search, setSearch] = useState(currentFilters.search || "");
-  const [category, setCategory] = useState(currentFilters.category || "");
-  const [status, setStatus] = useState(currentFilters.status || "");
-  const [owner, setOwner] = useState(currentFilters.owner || "");
+  const [category, setCategory] = useState(currentFilters.category || "all");
+  const [status, setStatus] = useState(currentFilters.status || "all");
+  const [owner, setOwner] = useState(currentFilters.owner || "all");
 
   const statusOptions = [
     { value: "available", label: "Available" },
@@ -50,22 +50,26 @@ export function EquipmentFilters({
     const params = new URLSearchParams();
 
     if (search) params.set("search", search);
-    if (category) params.set("category", category);
-    if (status) params.set("status", status);
-    if (owner) params.set("owner", owner);
+    if (category && category !== "all") params.set("category", category);
+    if (status && status !== "all") params.set("status", status);
+    if (owner && owner !== "all") params.set("owner", owner);
 
     router.push(`/equipment?${params.toString()}`);
   };
 
   const clearFilters = () => {
     setSearch("");
-    setCategory("");
-    setStatus("");
-    setOwner("");
+    setCategory("all");
+    setStatus("all");
+    setOwner("all");
     router.push("/equipment");
   };
 
-  const hasActiveFilters = search || category || status || owner;
+  const hasActiveFilters =
+    search ||
+    (category && category !== "all") ||
+    (status && status !== "all") ||
+    (owner && owner !== "all");
 
   return (
     <Card>
@@ -101,7 +105,7 @@ export function EquipmentFilters({
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All categories</SelectItem>
+                <SelectItem value="all">All categories</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat
@@ -121,7 +125,7 @@ export function EquipmentFilters({
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 {statusOptions.map((statusOption) => (
                   <SelectItem
                     key={statusOption.value}
@@ -143,7 +147,7 @@ export function EquipmentFilters({
                   <SelectValue placeholder="All owners" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All owners</SelectItem>
+                  <SelectItem value="all">All owners</SelectItem>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>

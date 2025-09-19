@@ -46,10 +46,29 @@ src/
 - **Admin**: Full system access, user management, reports, configuration
 
 ### Core Domain Models
-- **Equipment**: Hardware tracking with lifecycle management (pending → available → assigned → maintenance → decommissioned)
-- **Subscriptions**: Software license management with billing cycles
-- **Requests**: Multi-level approval workflows (User → Team Lead → Admin)
-- **Users**: Role hierarchy with team assignments
+
+The Prisma schema includes comprehensive models for the inventory system:
+
+**Core Business Models:**
+- **User**: Role-based system (admin/team_lead/user) with NextAuth.js integration
+- **Team**: Team organization with leader assignments
+- **Equipment**: Full lifecycle management with status tracking, ownership history
+- **EquipmentRequest**: Multi-level approval workflows with justification
+- **EquipmentHistory**: Complete audit trail for equipment transfers
+- **Subscription**: Software license management with billing cycles
+- **MaintenanceRecord**: Equipment maintenance tracking
+- **InventoryCheck**: Annual verification workflows
+- **SmallInventoryItem**: Quantity-based tracking for consumables
+
+**Authentication Models (NextAuth.js):**
+- **Account**: OAuth provider accounts
+- **Session**: User sessions
+- **VerificationToken**: Email verification tokens
+
+**Key Relationships:**
+- Users can own equipment, make requests, and have approval authority
+- Equipment has complete history tracking and maintenance records
+- Teams have leaders who can approve requests from team members
 
 ## Development Commands
 

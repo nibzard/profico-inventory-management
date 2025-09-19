@@ -1,0 +1,247 @@
+// ABOUTME: Prisma schema file for ProfiCo Inventory Management System
+// ABOUTME: Defines database models for users, equipment, subscriptions, and related entities
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String?   // For email/password auth
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("user") // "admin", "team_lead", "user"
+  teamId        String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  team                   Team?              @relation(fields: [teamId], references: [id])
+  ownedEquipment         Equipment[]        @relation("EquipmentOwner")
+  equipmentRequests      EquipmentRequest[] @relation("RequesterRequests")
+  approvedRequests       EquipmentRequest[] @relation("ApproverRequests")
+  subscriptions          Subscription[]
+  equipmentHistoryFrom   EquipmentHistory[] @relation("HistoryFromUser")
+  equipmentHistoryTo     EquipmentHistory[] @relation("HistoryToUser")
+
+  // NextAuth.js relations
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  leaderId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members User[]
+
+  @@map("teams")
+}
+
+model Equipment {
+  id             String    @id @default(cuid())
+  serialNumber   String    @unique
+  name           String
+  brand          String?
+  model          String?
+  category       String    // "computers", "mobile_devices", "peripherals", etc.
+  purchaseDate   DateTime
+  purchaseMethod String    // "company_card", "zopi", "leasing", "personal"
+  purchasePrice  Float?
+  currentOwnerId String?
+  status         String    @default("available") // "pending", "available", "assigned", etc.
+  specifications String?   // JSON string for flexible specs
+  warrantyInfo   String?
+  pins           String?   // For tablets/phones
+  photos         String?   // JSON array of photo URLs
+  invoiceUrl     String?
+  tags           String?   // JSON array of tags
+  location       String?
+  condition      String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  currentOwner     User?                @relation("EquipmentOwner", fields: [currentOwnerId], references: [id])
+  requests         EquipmentRequest[]
+  history          EquipmentHistory[]
+  maintenanceRecords MaintenanceRecord[]
+
+  @@map("equipment")
+}
+
+model EquipmentRequest {
+  id               String    @id @default(cuid())
+  requesterId      String
+  equipmentId      String?
+  equipmentType    String    // What type of equipment is being requested
+  justification    String
+  status           String    @default("pending") // "pending", "approved", "rejected", "ordered", "fulfilled"
+  teamLeadApproval Boolean?
+  adminApproval    Boolean?
+  approverId       String?
+  rejectionReason  String?
+  priority         String    @default("medium") // "low", "medium", "high", "urgent"
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  requester User       @relation("RequesterRequests", fields: [requesterId], references: [id])
+  approver  User?      @relation("ApproverRequests", fields: [approverId], references: [id])
+  equipment Equipment? @relation(fields: [equipmentId], references: [id])
+
+  @@map("equipment_requests")
+}
+
+model EquipmentHistory {
+  id         String   @id @default(cuid())
+  equipmentId String
+  fromUserId String?
+  toUserId   String?
+  action     String   // "assigned", "transferred", "returned", "maintenance", etc.
+  condition  String?  // Equipment condition during transfer
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+  fromUser  User?     @relation("HistoryFromUser", fields: [fromUserId], references: [id])
+  toUser    User?     @relation("HistoryToUser", fields: [toUserId], references: [id])
+
+  @@map("equipment_history")
+}
+
+model MaintenanceRecord {
+  id          String    @id @default(cuid())
+  equipmentId String
+  description String
+  cost        Float?
+  status      String    @default("pending") // "pending", "in_progress", "completed"
+  scheduledAt DateTime?
+  completedAt DateTime?
+  vendor      String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@map("maintenance_records")
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  softwareName     String
+  assignedUserId   String
+  assignedUserEmail String
+  price            Float
+  billingFrequency String   // "monthly", "yearly"
+  paymentMethod    String   // "company_card", "personal_card"
+  invoiceRecipient String
+  isReimbursement  Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  renewalDate      DateTime
+  invoices         String?  // JSON array of invoice URLs
+  vendor           String?
+  licenseKey       String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  assignedUser User @relation(fields: [assignedUserId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model InventoryCheck {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  status          String    @default("pending") // "pending", "in_progress", "completed"
+  scheduledAt     DateTime
+  completedAt     DateTime?
+  createdById     String
+  equipmentCount  Int       @default(0)
+  verifiedCount   Int       @default(0)
+  discrepancies   String?   // JSON array of discrepancy details
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("inventory_checks")
+}
+
+model SmallInventoryItem {
+  id           String  @id @default(cuid())
+  name         String
+  category     String
+  currentStock Int     @default(0)
+  minStock     Int     @default(0)
+  maxStock     Int?
+  unitPrice    Float?
+  location     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("small_inventory_items")
+}
+
+// NextAuth.js required models
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

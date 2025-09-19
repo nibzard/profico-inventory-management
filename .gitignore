@@ -127,3 +127,5 @@ uploads/
 
 # Claude development files
 .claude/
+
+/src/generated/prisma

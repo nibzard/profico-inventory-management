@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+dist
+*.log
+.env*
+.vercel
+.git
+*.md
+package-lock.json

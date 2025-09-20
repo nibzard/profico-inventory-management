@@ -119,13 +119,13 @@ describe("QRCodeGenerator", () => {
 
   it("should apply correct styling to dialog content", async () => {
     const user = userEvent.setup();
-    render(<QRCodeGenerator value={mockValue} />);
+    render(<QRCodeGenerator value={mockValue} title={mockTitle} />);
 
     const triggerButton = screen.getByRole("button", { name: /generate qr code/i });
     await user.click(triggerButton);
 
     const dialogContent = screen.getByText(mockTitle).closest("div");
-    expect(dialogContent).toHaveClass("max-w-md");
+    expect(dialogContent?.parentElement).toHaveClass("max-w-md");
 
     const qrContainer = screen.getByTestId("qr-code").closest("div");
     expect(qrContainer).toHaveClass("flex", "justify-center");
@@ -164,7 +164,7 @@ describe("QRCodeGenerator", () => {
     await user.click(triggerButton);
 
     expect(screen.getByText(longValue)).toBeInTheDocument();
-    const valueContainer = screen.getByText(longValue).closest("div");
+    const valueContainer = screen.getByText(longValue);
     expect(valueContainer).toHaveClass("break-all");
   });
 

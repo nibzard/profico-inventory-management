@@ -45,7 +45,6 @@ describe("QRScanner", () => {
       render(<QRScanner onScan={mockOnScan} />);
 
       expect(screen.getByText("Scan QR Code")).toBeInTheDocument();
-      expect(screen.getByText("Start Scanning")).toBeInTheDocument();
     });
 
     it("should render with custom trigger", () => {

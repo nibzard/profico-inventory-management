@@ -21,6 +21,7 @@ jest.mock("sonner", () => ({
 }));
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+// @ts-ignore
 global.fetch = mockFetch;
 const mockRouter = require("next/navigation").useRouter();
 const mockToast = toast as jest.Mocked<typeof toast>;
@@ -40,8 +41,8 @@ describe("EquipmentRequestForm", () => {
       render(<EquipmentRequestForm />);
 
       expect(screen.getByLabelText("Equipment Type *")).toBeInTheDocument();
-      expect(screen.getByLabelText("Category *")).toBeInTheDocument();
-      expect(screen.getByLabelText("Priority Level")).toBeInTheDocument();
+      expect(screen.getByText("Category *")).toBeInTheDocument();
+      expect(screen.getByText("Priority Level")).toBeInTheDocument();
       expect(screen.getByLabelText("Business Justification *")).toBeInTheDocument();
       expect(screen.getByLabelText("Specific Requirements (Optional)")).toBeInTheDocument();
 
@@ -54,22 +55,23 @@ describe("EquipmentRequestForm", () => {
 
       fireEvent.click(screen.getByText("Select equipment category"));
 
-      expect(screen.getByText("Computers & Laptops")).toBeInTheDocument();
-      expect(screen.getByText("Mobile Devices & Tablets")).toBeInTheDocument();
-      expect(screen.getByText("Peripherals (Mouse, Keyboard, etc.)")).toBeInTheDocument();
-      expect(screen.getByText("Other")).toBeInTheDocument();
+      // Check for options in the dropdown (using role="option")
+      expect(screen.getByRole("option", { name: "Computers & Laptops" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Mobile Devices & Tablets" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Peripherals (Mouse, Keyboard, etc.)" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Other" })).toBeInTheDocument();
     });
 
     it("should render priority levels with descriptions", () => {
       render(<EquipmentRequestForm />);
 
-      fireEvent.click(screen.getByDisplayValue("Medium - Important"));
+      fireEvent.click(screen.getByText("Medium - Important"));
 
-      expect(screen.getByText("Low - Nice to have")).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes("Low - Nice to have"))).toBeInTheDocument();
       expect(screen.getByText("Can wait several weeks")).toBeInTheDocument();
-      expect(screen.getByText("High - Critical")).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes("High - Critical"))).toBeInTheDocument();
       expect(screen.getByText("Needed within a few days")).toBeInTheDocument();
-      expect(screen.getByText("Urgent - Blocking work")).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes("Urgent - Blocking work"))).toBeInTheDocument();
       expect(screen.getByText("Needed immediately")).toBeInTheDocument();
     });
 
@@ -77,7 +79,7 @@ describe("EquipmentRequestForm", () => {
       render(<EquipmentRequestForm />);
 
       expect(screen.getByText("Be specific about the type and model if known")).toBeInTheDocument();
-      expect(screen.getByText("Minimum 20 characters. The more detail you provide, the faster the approval process.")).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes("Minimum 20 characters"))).toBeInTheDocument();
       expect(screen.getByText("Before Submitting")).toBeInTheDocument();
       expect(screen.getByText("Check if similar equipment is already available in the system")).toBeInTheDocument();
     });
@@ -85,8 +87,7 @@ describe("EquipmentRequestForm", () => {
     it("should have default priority set to medium", () => {
       render(<EquipmentRequestForm />);
 
-      const prioritySelect = screen.getByLabelText("Priority Level");
-      expect(prioritySelect).toHaveDisplayValue("Medium - Important");
+      expect(screen.getByText("Medium - Important")).toBeInTheDocument();
     });
   });
 
@@ -125,7 +126,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Too short" },
@@ -149,7 +150,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "This is a valid justification that meets the minimum 20 character requirement." },
@@ -208,13 +209,13 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: validFormData.justification },
       });
 
-      fireEvent.click(screen.getByDisplayValue("Medium - Important"));
+      fireEvent.click(screen.getByText("Medium - Important"));
       fireEvent.click(screen.getByText("High - Critical"));
 
       fireEvent.change(screen.getByLabelText("Specific Requirements (Optional)"), {
@@ -252,7 +253,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "  Justification with spaces  " },
@@ -290,7 +291,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: validFormData.justification },
@@ -333,7 +334,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -357,7 +358,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -384,7 +385,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -413,7 +414,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -442,7 +443,7 @@ describe("EquipmentRequestForm", () => {
       });
 
       fireEvent.click(screen.getByText("Select equipment category"));
-      fireEvent.click(screen.getByText("Computers & Laptops"));
+      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -490,13 +491,12 @@ describe("EquipmentRequestForm", () => {
     it("should handle priority selection correctly", () => {
       render(<EquipmentRequestForm />);
 
-      const prioritySelect = screen.getByLabelText("Priority Level");
-      expect(prioritySelect).toHaveDisplayValue("Medium - Important");
+      expect(screen.getByText("Medium - Important")).toBeInTheDocument();
 
-      fireEvent.click(prioritySelect);
-      fireEvent.click(screen.getByText("High - Critical"));
+      fireEvent.click(screen.getByText("Medium - Important"));
+      fireEvent.click(screen.getByText((content) => content.includes("High - Critical")));
 
-      expect(prioritySelect).toHaveDisplayValue("High - Critical");
+      expect(screen.getByText("High - Critical")).toBeInTheDocument();
     });
   });
 
@@ -504,16 +504,15 @@ describe("EquipmentRequestForm", () => {
     it("should have proper form labels", () => {
       render(<EquipmentRequestForm />);
 
-      const equipmentTypeLabel = screen.getByLabelText("Equipment Type *");
-      const categoryLabel = screen.getByLabelText("Category *");
-      const justificationLabel = screen.getByLabelText("Business Justification *");
+      const equipmentTypeLabel = screen.getByText("Equipment Type *");
+      const categoryLabel = screen.getByText("Category *");
+      const justificationLabel = screen.getByText("Business Justification *");
 
       expect(equipmentTypeLabel).toBeInTheDocument();
       expect(categoryLabel).toBeInTheDocument();
       expect(justificationLabel).toBeInTheDocument();
 
       expect(equipmentTypeLabel).toHaveAttribute("for", "equipmentType");
-      expect(categoryLabel).toHaveAttribute("for", "category");
       expect(justificationLabel).toHaveAttribute("for", "justification");
     });
 

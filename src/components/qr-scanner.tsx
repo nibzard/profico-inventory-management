@@ -103,6 +103,7 @@ export default function QRScanner({ onScan, trigger }: QRScannerProps) {
             <div className="space-y-4">
               <video
                 ref={videoRef}
+                data-testid="video-element"
                 className="w-full h-64 bg-black rounded-lg"
                 playsInline
                 muted

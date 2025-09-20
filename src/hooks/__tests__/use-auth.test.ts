@@ -38,7 +38,7 @@ describe("useAuth", () => {
     expect(result.current.isLoading).toBe(true);
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeUndefined();
-    expect(result.current.session).toBeUndefined();
+    expect(result.current.session).toBeNull();
   });
 
   it("should return authenticated state with user data", () => {
@@ -63,7 +63,7 @@ describe("useAuth", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeUndefined();
-    expect(result.current.session).toBeUndefined();
+    expect(result.current.session).toBeNull();
   });
 
   describe("checkRole", () => {

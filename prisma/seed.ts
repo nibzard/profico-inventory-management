@@ -25,7 +25,7 @@ async function main() {
     },
   });
 
-  // Create users
+  // Create users (authentication via magic links)
   await prisma.user.upsert({
     where: { email: "admin@profico.com" },
     update: {},
@@ -240,6 +240,11 @@ async function main() {
   console.log(
     `📦 Created ${await prisma.smallInventoryItem.count()} small inventory items`
   );
+  console.log("\n🔐 Test accounts created (authentication via magic links):");
+  console.log("Email: admin@profico.com, Role: admin");
+  console.log("Email: lead@profico.com, Role: team_lead");
+  console.log("Email: user@profico.com, Role: user");
+  console.log("Email: marketing@profico.com, Role: user");
 }
 
 main()

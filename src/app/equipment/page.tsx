@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Download, QrCode } from "lucide-react";
+import { Plus, Download, QrCode, Search } from "lucide-react";
 import Link from "next/link";
 
 interface SearchParams {
@@ -112,6 +112,12 @@ export default async function EquipmentPage({
             </p>
           </div>
           <div className="flex space-x-3">
+            <Button variant="outline" asChild>
+              <Link href="/equipment/search">
+                <Search className="h-4 w-4 mr-2" />
+                Advanced Search
+              </Link>
+            </Button>
             {(user.role === "admin" || user.role === "team_lead") && (
               <>
                 <Button asChild>

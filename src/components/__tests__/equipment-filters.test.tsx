@@ -58,9 +58,11 @@ describe("EquipmentFilters", () => {
     it("should populate categories in select", () => {
       render(<EquipmentFilters {...defaultProps} />);
 
-      fireEvent.click(screen.getByText("All categories"));
+      // Click the select trigger specifically, not just any text
+      const categorySelect = screen.getByLabelText("Category").closest('[data-testid="select"]');
+      const trigger = categorySelect?.querySelector('[data-testid="select-trigger"]');
+      fireEvent.click(trigger);
       
-      expect(screen.getByText("All categories")).toBeInTheDocument();
       expect(screen.getByText("Laptop")).toBeInTheDocument();
       expect(screen.getByText("Phone")).toBeInTheDocument();
       expect(screen.getByText("Monitor")).toBeInTheDocument();
@@ -69,9 +71,11 @@ describe("EquipmentFilters", () => {
     it("should populate status options", () => {
       render(<EquipmentFilters {...defaultProps} />);
 
-      fireEvent.click(screen.getByText("All statuses"));
+      // Click the status select trigger specifically
+      const statusSelect = screen.getByLabelText("Status").closest('[data-testid="select"]');
+      const trigger = statusSelect?.querySelector('[data-testid="select-trigger"]');
+      fireEvent.click(trigger);
       
-      expect(screen.getByText("All statuses")).toBeInTheDocument();
       expect(screen.getByText("Available")).toBeInTheDocument();
       expect(screen.getByText("Assigned")).toBeInTheDocument();
       expect(screen.getByText("Maintenance")).toBeInTheDocument();
@@ -133,8 +137,9 @@ describe("EquipmentFilters", () => {
     it("should include category in filter params", async () => {
       render(<EquipmentFilters {...defaultProps} />);
 
-      // Open category select
-      const categoryTrigger = screen.getByText("All categories");
+      // Open category select using proper selector
+      const categorySelect = screen.getByLabelText("Category").closest('[data-testid="select"]');
+      const categoryTrigger = categorySelect?.querySelector('[data-testid="select-trigger"]');
       fireEvent.click(categoryTrigger);
 
       // Select laptop category
@@ -151,8 +156,9 @@ describe("EquipmentFilters", () => {
     it("should include status in filter params", async () => {
       render(<EquipmentFilters {...defaultProps} />);
 
-      // Open status select
-      const statusTrigger = screen.getByText("All statuses");
+      // Open status select using proper selector
+      const statusSelect = screen.getByLabelText("Status").closest('[data-testid="select"]');
+      const statusTrigger = statusSelect?.querySelector('[data-testid="select-trigger"]');
       fireEvent.click(statusTrigger);
 
       // Select available status
@@ -169,8 +175,9 @@ describe("EquipmentFilters", () => {
     it("should include owner in filter params for admin", async () => {
       render(<EquipmentFilters {...defaultProps} userRole="admin" />);
 
-      // Open owner select
-      const ownerTrigger = screen.getByText("All owners");
+      // Open owner select using proper selector
+      const ownerSelect = screen.getByLabelText("Owner").closest('[data-testid="select"]');
+      const ownerTrigger = ownerSelect?.querySelector('[data-testid="select-trigger"]');
       fireEvent.click(ownerTrigger);
 
       // Select first user
@@ -261,7 +268,10 @@ describe("EquipmentFilters", () => {
 
       render(<EquipmentFilters {...props} />);
 
-      fireEvent.click(screen.getByText("All categories"));
+      // Click the category select trigger specifically
+      const categorySelect = screen.getByLabelText("Category").closest('[data-testid="select"]');
+      const trigger = categorySelect?.querySelector('[data-testid="select-trigger"]');
+      fireEvent.click(trigger);
       
       expect(screen.getByText("Laptop Computer")).toBeInTheDocument();
       expect(screen.getByText("Smart Phone")).toBeInTheDocument();
@@ -275,7 +285,10 @@ describe("EquipmentFilters", () => {
 
       render(<EquipmentFilters {...props} />);
 
-      fireEvent.click(screen.getByText("All categories"));
+      // Click the category select trigger specifically
+      const categorySelect = screen.getByLabelText("Category").closest('[data-testid="select"]');
+      const trigger = categorySelect?.querySelector('[data-testid="select-trigger"]');
+      fireEvent.click(trigger);
       
       expect(screen.getByText("Test Category")).toBeInTheDocument();
     });
@@ -285,7 +298,10 @@ describe("EquipmentFilters", () => {
     it("should show unassigned option for admin users", () => {
       render(<EquipmentFilters {...defaultProps} userRole="admin" />);
 
-      fireEvent.click(screen.getByText("All owners"));
+      // Click the owner select trigger specifically
+      const ownerSelect = screen.getByLabelText("Owner").closest('[data-testid="select"]');
+      const trigger = ownerSelect?.querySelector('[data-testid="select-trigger"]');
+      fireEvent.click(trigger);
       
       expect(screen.getByText("Unassigned")).toBeInTheDocument();
     });

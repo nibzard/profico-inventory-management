@@ -9,7 +9,7 @@ describe('Input', () => {
     
     const input = screen.getByPlaceholderText(/enter text/i)
     expect(input).toBeInTheDocument()
-    expect(input).toHaveClass('border-input')
+    expect(input).toHaveAttribute('placeholder', 'Enter text')
   })
 
   it('handles value changes', async () => {

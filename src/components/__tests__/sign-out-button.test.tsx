@@ -28,9 +28,9 @@ describe("SignOutButton", () => {
 
     const button = screen.getByRole("button", { name: /sign out/i });
     expect(button).toBeInTheDocument();
-    // Check that it's not disabled and has basic button classes
+    // Check that it's not disabled and has outline variant
     expect(button).not.toBeDisabled();
-    expect(button).toHaveClass("inline-flex", "items-center", "justify-center");
+    expect(button).toHaveAttribute("data-variant", "outline");
   });
 
   it("should call signOut with callbackUrl when clicked", () => {
@@ -72,7 +72,7 @@ describe("SignOutButton", () => {
 
     const button = screen.getByRole("button", { name: /sign out/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("inline-flex", "items-center", "justify-center", "gap-2");
+    expect(button).toHaveAttribute("data-variant", "outline");
     expect(button).toHaveTextContent("Sign Out");
   });
 });

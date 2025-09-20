@@ -2,14 +2,21 @@
 // ABOUTME: Handles POST requests for creating new equipment requests
 
 import { z } from "zod";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { requestSchemas, InputSanitizer, ValidationHelper } from "@/lib/validation";
 import { withSecurity } from "@/lib/security-middleware";
 
+interface AuthenticatedRequest extends NextRequest {
+  user?: {
+    id?: string;
+    name?: string;
+    role?: string;
+  };
+}
+
 export async function GET(request: NextRequest) {
-  return withSecurity(request, async (req) => {
+  return withSecurity(request, async (req: AuthenticatedRequest) => {
     try {
       const { searchParams } = new URL(req.url);
       
@@ -19,7 +26,7 @@ export async function GET(request: NextRequest) {
       const status = validatedParams.status;
       const userId = validatedParams.owner;
       const needsApproval = searchParams.get("needsApproval") === "true";
-      const user = (req as any).user;
+      const user = req.user;
 
     const whereClause: Record<string, unknown> = {};
 
@@ -29,18 +36,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Regular users can only see their own requests
-    if (user.role === "user") {
+    if (user?.role === "user") {
       whereClause.requesterId = user.id;
     } else if (userId) {
       whereClause.requesterId = userId;
     }
 
     // For team leads/admins, filter for requests needing their approval
-    if (needsApproval && user.role !== "user") {
-      if (user.role === "team_lead") {
+    if (needsApproval && user?.role !== "user") {
+      if (user?.role === "team_lead") {
         whereClause.status = "pending";
         whereClause.teamLeadApproval = null;
-      } else if (user.role === "admin") {
+      } else if (user?.role === "admin") {
         whereClause.status = "pending";
         whereClause.teamLeadApproval = true;
         whereClause.adminApproval = null;
@@ -91,9 +98,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withSecurity(request, async (req) => {
+  return withSecurity(request, async (req: AuthenticatedRequest) => {
     try {
-      const user = (req as any).user;
+      const user = req.user;
       const body = await req.json();
       
       // Validate and sanitize input

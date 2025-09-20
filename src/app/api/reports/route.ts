@@ -1,13 +1,25 @@
 // ABOUTME: API endpoint for generating equipment reports with validation
 // ABOUTME: Handles GET requests for equipment reports with filtering and validation
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ValidationHelper, reportSchemas } from '@/lib/validation';
 import { withSecurity } from '@/lib/security-middleware';
 
+interface AuthenticatedRequest extends NextRequest {
+  user?: {
+    name?: string;
+    role?: string;
+  };
+}
+
+interface DateFilter {
+  gte?: Date;
+  lte?: Date;
+}
+
 export async function GET(request: Request) {
-  return withSecurity(request as any, async (req) => {
+  return withSecurity(request as NextRequest, async (req: AuthenticatedRequest) => {
     try {
       const { searchParams } = new URL(req.url);
       
@@ -42,13 +54,14 @@ export async function GET(request: Request) {
     }
 
     if (params.dateFrom || params.dateTo) {
-      (where as any).purchaseDate = {};
+      const dateFilter: DateFilter = {};
       if (params.dateFrom) {
-        (where as any).purchaseDate.gte = new Date(params.dateFrom);
+        dateFilter.gte = new Date(params.dateFrom);
       }
       if (params.dateTo) {
-        (where as any).purchaseDate.lte = new Date(params.dateTo);
+        dateFilter.lte = new Date(params.dateTo);
       }
+      where.purchaseDate = dateFilter;
     }
 
     // Get equipment counts by status

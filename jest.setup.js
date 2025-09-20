@@ -215,6 +215,8 @@ jest.mock('@/components/ui/dialog', () => {
     DialogContent,
     DialogHeader: ({ children, ...props }) => <div {...props}>{children}</div>,
     DialogTitle: ({ children, ...props }) => <h3 {...props}>{children}</h3>,
+    DialogDescription: ({ children, ...props }) => <p {...props}>{children}</p>,
+    DialogFooter: ({ children, ...props }) => <div {...props}>{children}</div>,
   };
 })
 
@@ -253,13 +255,12 @@ jest.mock('@/components/ui/select', () => {
         </div>
       );
     },
-    SelectTrigger: ({ children, selectedValue, onValueChange, isOpen, setIsOpen, ...props }) => {
+    SelectTrigger: ({ children, ...allProps }) => {
+      const { selectedValue, onValueChange, isOpen, setIsOpen, ...domProps } = allProps;
+      
       const handleClick = () => {
         setIsOpen?.(!isOpen);
       };
-      
-      // Filter out non-DOM props before passing to the button element
-      const { selectedValue: _, onValueChange: __, isOpen: ___, setIsOpen: ____, ...domProps } = props;
       
       // Generate a unique ID for accessibility if not provided
       const id = domProps.id || React.useId?.() || `select-trigger-${Math.random().toString(36).substr(2, 9)}`;
@@ -270,13 +271,15 @@ jest.mock('@/components/ui/select', () => {
         </button>
       );
     },
-    SelectValue: ({ children, placeholder, selectedValue, onValueChange, ...props }) => (
-      <span {...props}>{children || placeholder}</span>
-    ),
-    SelectContent: ({ children, selectedValue, onValueChange, isOpen, ...props }) => {
+    SelectValue: ({ children, placeholder, ...allProps }) => {
+      const { selectedValue, onValueChange, ...domProps } = allProps;
+      return <span {...domProps}>{children || placeholder}</span>;
+    },
+    SelectContent: ({ children, ...allProps }) => {
+      const { selectedValue, onValueChange, isOpen, ...domProps } = allProps;
       // Always render but hide with CSS for easier testing
       return (
-        <div {...props} style={{ display: isOpen ? 'block' : 'none' }} data-open={isOpen}>
+        <div {...domProps} style={{ display: isOpen ? 'block' : 'none' }} data-open={isOpen}>
           {React.Children.map(children, child => {
             if (React.isValidElement(child)) {
               // Pass onValueChange to SelectItem children, but preserve their own value prop
@@ -290,10 +293,11 @@ jest.mock('@/components/ui/select', () => {
         </div>
       );
     },
-    SelectItem: ({ children, value: itemValue, selectedValue, onValueChange, ...props }) => {
+    SelectItem: ({ children, value: itemValue, ...allProps }) => {
+      const { selectedValue, onValueChange, ...domProps } = allProps;
       return (
         <div 
-          {...props}
+          {...domProps}
           role="option"
           onClick={() => onValueChange?.(itemValue)}
           data-value={itemValue}
@@ -467,8 +471,8 @@ jest.mock('lucide-react', () => ({
   CheckCircle: () => <svg data-testid="check-circle" />,
   XCircle: () => <svg data-testid="x-circle" />,
   Clock: () => <svg data-testid="clock" />,
-  ChevronLeft: () => <svg data-testid="chevron-left" />,
-  ChevronRight: () => <svg data-testid="chevron-right" />,
+  ChevronLeft: () => <svg data-testid="chevronleft-icon" />,
+  ChevronRight: () => <svg data-testid="chevronright-icon" />,
   Copy: () => <svg data-testid="copy-icon" />,
   Search: () => <svg data-testid="search-icon" />,
   Filter: () => <svg data-testid="filter-icon" />,

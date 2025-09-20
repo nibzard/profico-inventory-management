@@ -9,10 +9,10 @@ import { withSecurity } from "@/lib/security-middleware";
 
 async function assignEquipmentHandler(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const equipmentId = params.id;
+    const { id: equipmentId } = await params;
     const body = await request.json();
     
     // Validate input
@@ -88,7 +88,7 @@ async function assignEquipmentHandler(
           equipmentId,
           toUserId: userId,
           action: "assigned",
-          notes: sanitizedNotes || `Assigned by ${(request as any).user?.name || 'System'}`,
+          notes: sanitizedNotes || `Assigned by ${(request as { user?: { name?: string } }).user?.name || 'System'}`,
         },
       });
 
@@ -118,7 +118,7 @@ async function assignEquipmentHandler(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withSecurity(request, (req) => assignEquipmentHandler(req, { params }), {
     requireAuth: true,

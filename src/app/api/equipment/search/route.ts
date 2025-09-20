@@ -1,15 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ValidationHelper } from '@/lib/validation';
 import { withSecurity } from '@/lib/security-middleware';
 
+interface AuthenticatedRequest extends NextRequest {
+  user?: {
+    id?: string;
+    name?: string;
+    role?: string;
+  };
+}
+
 export async function GET(request: Request) {
-  return withSecurity(request as any, async (req) => {
+  return withSecurity(request as NextRequest, async (req: AuthenticatedRequest) => {
     try {
       const { searchParams } = new URL(req.url);
       
       // Apply role-based filtering based on authenticated user
-      const user = (req as any).user;
+      const user = req.user;
       
       // Validate and sanitize pagination parameters
     const pagination = ValidationHelper.validatePaginationParams(searchParams);
@@ -20,6 +28,16 @@ export async function GET(request: Request) {
 
     // Build the where clause based on filters
     const where: Record<string, unknown> = {};
+    
+    interface PriceFilter {
+      gte?: number;
+      lte?: number;
+    }
+    
+    interface DateFilter {
+      gte?: Date;
+      lte?: Date;
+    }
 
     // Apply validated and sanitized filters
     if (filters.search) {
@@ -68,23 +86,25 @@ export async function GET(request: Request) {
     }
 
     if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
-      (where as any).purchasePrice = {};
-      if (filters.priceMin !== null) {
-        (where as any).purchasePrice.gte = filters.priceMin;
+      const priceFilter: PriceFilter = {};
+      if (filters.priceMin !== null && filters.priceMin !== undefined) {
+        priceFilter.gte = typeof filters.priceMin === 'string' ? parseFloat(filters.priceMin) : filters.priceMin;
       }
-      if (filters.priceMax !== null) {
-        (where as any).purchasePrice.lte = filters.priceMax;
+      if (filters.priceMax !== null && filters.priceMax !== undefined) {
+        priceFilter.lte = typeof filters.priceMax === 'string' ? parseFloat(filters.priceMax) : filters.priceMax;
       }
+      where.purchasePrice = priceFilter;
     }
 
     if (filters.purchaseDateFrom || filters.purchaseDateTo) {
-      (where as any).purchaseDate = {};
+      const dateFilter: DateFilter = {};
       if (filters.purchaseDateFrom) {
-        (where as any).purchaseDate.gte = new Date(filters.purchaseDateFrom);
+        dateFilter.gte = new Date(filters.purchaseDateFrom);
       }
       if (filters.purchaseDateTo) {
-        (where as any).purchaseDate.lte = new Date(filters.purchaseDateTo);
+        dateFilter.lte = new Date(filters.purchaseDateTo);
       }
+      where.purchaseDate = dateFilter;
     }
 
     if (filters.tags) {
@@ -105,7 +125,7 @@ export async function GET(request: Request) {
       // Regular users can only see equipment assigned to them or available equipment
       where.OR = [
         ...((where.OR || []) as Array<Record<string, unknown>>),
-        { currentOwnerId: user.id },
+        { currentOwnerId: user?.id },
         { status: 'available' },
       ];
     }

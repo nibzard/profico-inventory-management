@@ -15,7 +15,7 @@ describe('Button', () => {
     
     const button = screen.getByRole('button', { name: /delete/i })
     expect(button).toBeInTheDocument()
-    expect(button).toHaveClass('bg-destructive')
+    expect(button).toHaveAttribute('data-variant', 'destructive')
   })
 
   it('handles click events', async () => {

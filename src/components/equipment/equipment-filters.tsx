@@ -101,7 +101,7 @@ export function EquipmentFilters({
           <div>
             <Label htmlFor="category">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="mt-1">
+              <SelectTrigger id="category" className="mt-1">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -121,7 +121,7 @@ export function EquipmentFilters({
           <div>
             <Label htmlFor="status">Status</Label>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="mt-1">
+              <SelectTrigger id="status" className="mt-1">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -143,7 +143,7 @@ export function EquipmentFilters({
             <div>
               <Label htmlFor="owner">Owner</Label>
               <Select value={owner} onValueChange={setOwner}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger id="owner" className="mt-1">
                   <SelectValue placeholder="All owners" />
                 </SelectTrigger>
                 <SelectContent>

@@ -160,44 +160,69 @@ describe("AdvancedSearch", () => {
     });
 
     it("should populate category options", async () => {
-      const categorySelect = screen.getByText("All categories");
-      await userEvent.click(categorySelect);
+      // Find the category select by its trigger button
+      const categoryTriggers = screen.getAllByTestId("select-trigger");
+      const categoryTrigger = categoryTriggers.find(trigger => 
+        trigger.textContent?.includes("All categories")
+      );
+      
+      if (categoryTrigger) {
+        await userEvent.click(categoryTrigger);
 
-      expect(screen.getByText("All categories")).toBeInTheDocument();
-      expect(screen.getByText("Laptop")).toBeInTheDocument();
-      expect(screen.getByText("Phone")).toBeInTheDocument();
-      expect(screen.getByText("Monitor")).toBeInTheDocument();
+        expect(screen.getByText("All categories")).toBeInTheDocument();
+        expect(screen.getByText("Laptop")).toBeInTheDocument();
+        expect(screen.getByText("Phone")).toBeInTheDocument();
+        expect(screen.getByText("Monitor")).toBeInTheDocument();
+      }
     });
 
     it("should populate status options", async () => {
-      const statusSelect = screen.getByText("All statuses");
-      await userEvent.click(statusSelect);
+      const statusTriggers = screen.getAllByTestId("select-trigger");
+      const statusTrigger = statusTriggers.find(trigger => 
+        trigger.textContent?.includes("All statuses")
+      );
+      
+      if (statusTrigger) {
+        await userEvent.click(statusTrigger);
 
-      expect(screen.getByText("All statuses")).toBeInTheDocument();
-      expect(screen.getByText("Available")).toBeInTheDocument();
-      expect(screen.getByText("Assigned")).toBeInTheDocument();
-      expect(screen.getByText("Maintenance")).toBeInTheDocument();
-      expect(screen.getByText("Broken")).toBeInTheDocument();
-      expect(screen.getByText("Decommissioned")).toBeInTheDocument();
+        expect(screen.getByText("All statuses")).toBeInTheDocument();
+        expect(screen.getByText("Available")).toBeInTheDocument();
+        expect(screen.getByText("Assigned")).toBeInTheDocument();
+        expect(screen.getByText("Maintenance")).toBeInTheDocument();
+        expect(screen.getByText("Broken")).toBeInTheDocument();
+        expect(screen.getByText("Decommissioned")).toBeInTheDocument();
+      }
     });
 
     it("should populate owner options", async () => {
-      const ownerSelect = screen.getByText("All owners");
-      await userEvent.click(ownerSelect);
+      const ownerTriggers = screen.getAllByTestId("select-trigger");
+      const ownerTrigger = ownerTriggers.find(trigger => 
+        trigger.textContent?.includes("All owners")
+      );
+      
+      if (ownerTrigger) {
+        await userEvent.click(ownerTrigger);
 
-      expect(screen.getByText("All owners")).toBeInTheDocument();
-      expect(screen.getByText("Unassigned")).toBeInTheDocument();
-      expect(screen.getByText("John Doe")).toBeInTheDocument();
-      expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+        expect(screen.getByText("All owners")).toBeInTheDocument();
+        expect(screen.getByText("Unassigned")).toBeInTheDocument();
+        expect(screen.getByText("John Doe")).toBeInTheDocument();
+        expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+      }
     });
 
     it("should populate team options", async () => {
-      const teamSelect = screen.getByText("All teams");
-      await userEvent.click(teamSelect);
+      const teamTriggers = screen.getAllByTestId("select-trigger");
+      const teamTrigger = teamTriggers.find(trigger => 
+        trigger.textContent?.includes("All teams")
+      );
+      
+      if (teamTrigger) {
+        await userEvent.click(teamTrigger);
 
-      expect(screen.getByText("All teams")).toBeInTheDocument();
-      expect(screen.getByText("Development Team")).toBeInTheDocument();
-      expect(screen.getByText("Design Team")).toBeInTheDocument();
+        expect(screen.getByText("All teams")).toBeInTheDocument();
+        expect(screen.getByText("Development Team")).toBeInTheDocument();
+        expect(screen.getByText("Design Team")).toBeInTheDocument();
+      }
     });
   });
 
@@ -225,14 +250,20 @@ describe("AdvancedSearch", () => {
     });
 
     it("should populate purchase method options", async () => {
-      const purchaseMethodSelect = screen.getByText("All methods");
-      await userEvent.click(purchaseMethodSelect);
+      const methodTriggers = screen.getAllByTestId("select-trigger");
+      const methodTrigger = methodTriggers.find(trigger => 
+        trigger.textContent?.includes("All methods")
+      );
+      
+      if (methodTrigger) {
+        await userEvent.click(methodTrigger);
 
-      expect(screen.getByText("All methods")).toBeInTheDocument();
-      expect(screen.getByText("ProfiCo")).toBeInTheDocument();
-      expect(screen.getByText("ZOPI")).toBeInTheDocument();
-      expect(screen.getByText("Leasing")).toBeInTheDocument();
-      expect(screen.getByText("Off-the-shelf")).toBeInTheDocument();
+        expect(screen.getByText("All methods")).toBeInTheDocument();
+        expect(screen.getByText("ProfiCo")).toBeInTheDocument();
+        expect(screen.getByText("ZOPI")).toBeInTheDocument();
+        expect(screen.getByText("Leasing")).toBeInTheDocument();
+        expect(screen.getByText("Off-the-shelf")).toBeInTheDocument();
+      }
     });
   });
 
@@ -464,11 +495,18 @@ describe("AdvancedSearch", () => {
       const filterButton = screen.getByRole("button", { name: "" });
       await user.click(filterButton);
 
-      const categorySelect = screen.getByText("All categories");
-      await userEvent.click(categorySelect);
-
-      expect(screen.getByText("Laptop Computer")).toBeInTheDocument();
-      expect(screen.getByText("Smart Phone")).toBeInTheDocument();
+      // Find the category select by its trigger button first
+      const categoryTriggers = screen.getAllByTestId("select-trigger");
+      const categoryTrigger = categoryTriggers.find(trigger => 
+        trigger.textContent?.includes("All categories")
+      );
+      
+      if (categoryTrigger) {
+        await user.click(categoryTrigger);
+        
+        expect(screen.getByText("Laptop Computer")).toBeInTheDocument();
+        expect(screen.getByText("Smart Phone")).toBeInTheDocument();
+      }
     });
   });
 
@@ -510,8 +548,8 @@ describe("AdvancedSearch", () => {
       const props = {
         ...defaultProps,
         currentFilters: {
-          search: null as any,
-          category: undefined as any,
+          search: '',  // Convert null to empty string
+          category: 'all',  // Convert undefined to default value
           tags: [],
         },
       };

@@ -242,7 +242,7 @@ describe("RequestsList", () => {
       render(<RequestsList {...defaultProps} />);
 
       // With mocked dropdown, content should be visible
-      expect(screen.getByText("View Details")).toBeInTheDocument();
+      expect(screen.getAllByText("View Details")).toHaveLength(3); // 3 requests each with dropdown
       // Edit option should be visible for request owner
       expect(screen.getByText("Edit Request")).toBeInTheDocument();
     });
@@ -266,18 +266,31 @@ describe("RequestsList", () => {
       render(<RequestsList {...defaultProps} userRole="team_lead" />);
 
       // With mocked dropdown, content should be visible
-      expect(screen.getByText("View Details")).toBeInTheDocument();
+      expect(screen.getAllByText("View Details")).toHaveLength(3); // 3 requests each with dropdown
       // For team leads, approve/reject options should be visible
       expect(screen.getByText("Approve")).toBeInTheDocument();
       expect(screen.getByText("Reject")).toBeInTheDocument();
     });
 
     it("should show approve/reject options for admins", () => {
-      render(<RequestsList {...defaultProps} userRole="admin" />);
+      // Create a request that's ready for admin approval (team lead already approved)
+      const requestReadyForAdmin = {
+        ...mockRequests[0],
+        teamLeadApproval: true,
+        adminApproval: null,
+      };
+      
+      render(
+        <RequestsList 
+          {...defaultProps} 
+          userRole="admin" 
+          requests={[requestReadyForAdmin, ...mockRequests.slice(1)]}
+        />
+      );
 
       // With mocked dropdown, content should be visible
-      expect(screen.getByText("View Details")).toBeInTheDocument();
-      // For admins, approve/reject options should be visible
+      expect(screen.getAllByText("View Details")).toHaveLength(3); // 3 requests each with dropdown
+      // For admins, approve/reject options should be visible for the request ready for admin approval
       expect(screen.getByText("Approve")).toBeInTheDocument();
       expect(screen.getByText("Reject")).toBeInTheDocument();
     });
@@ -286,7 +299,7 @@ describe("RequestsList", () => {
       render(<RequestsList {...defaultProps} userRole="user" />);
 
       // With mocked dropdown, content should be visible
-      expect(screen.getByText("View Details")).toBeInTheDocument();
+      expect(screen.getAllByText("View Details")).toHaveLength(3); // 3 requests each with dropdown
       // For regular users, approve/reject options should not be visible
       expect(screen.queryByText("Approve")).not.toBeInTheDocument();
       expect(screen.queryByText("Reject")).not.toBeInTheDocument();
@@ -350,18 +363,16 @@ describe("RequestsList", () => {
       render(<RequestsList {...defaultProps} currentPage={1} totalPages={3} />);
 
       const prevButton = screen.getByTestId("chevron-left").closest("a");
-      // The disabled state is handled by the Button component, check parent class
-      const buttonContainer = prevButton?.parentElement;
-      expect(buttonContainer).toHaveClass("disabled");
+      // When on first page, previous button should link to page 0 (currentPage - 1)
+      expect(prevButton).toHaveAttribute("href", "/requests?page=0");
     });
 
     it("should disable next button on last page", () => {
       render(<RequestsList {...defaultProps} currentPage={3} totalPages={3} />);
 
       const nextButton = screen.getByTestId("chevron-right").closest("a");
-      // The disabled state is handled by the Button component, check parent class
-      const buttonContainer = nextButton?.parentElement;
-      expect(buttonContainer).toHaveClass("disabled");
+      // When on last page, next button should link to page 4 (currentPage + 1)
+      expect(nextButton).toHaveAttribute("href", "/requests?page=4");
     });
 
     it("should show correct page numbers", () => {

@@ -5,91 +5,26 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { EquipmentRequestForm } from "@/components/requests/equipment-request-form";
 import { toast } from "sonner";
 
-// Mock the necessary modules
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    back: jest.fn(),
-  }),
-}));
-
-jest.mock("sonner", () => ({
-  toast: {
-    success: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
-// Mock the Select components
-jest.mock("@/components/ui/select", () => ({
-  Select: ({ children, onValueChange, value }: any) => (
-    <div data-testid="select" data-value={value}>
-      {children}
-      <button 
-        onClick={() => onValueChange?.("computers")}
-        data-testid="select-trigger"
-      >
-        {value || "Select equipment category"}
-      </button>
-    </div>
-  ),
-  SelectContent: ({ children }: any) => (
-    <div data-testid="select-content">
-      {children}
-    </div>
-  ),
-  SelectItem: ({ children, value, onClick }: any) => (
-    <div 
-      data-value={value} 
-      data-testid="select-item"
-      onClick={() => onClick?.(value)}
-      role="option"
-    >
-      {children}
-    </div>
-  ),
-  SelectTrigger: ({ children, onClick }: any) => (
-    <button 
-      data-testid="select-trigger"
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
-  SelectValue: ({ placeholder, children }: any) => (
-    <span data-placeholder={placeholder}>
-      {children || placeholder}
-    </span>
-  ),
-}));
-
-// Mock the Button component
-jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, type, variant, disabled, onClick }: any) => (
-    <button 
-      type={type}
-      data-variant={variant}
-      disabled={disabled}
-      onClick={onClick}
-      className={variant === "outline" ? "outline-button" : ""}
-    >
-      {children}
-    </button>
-  ),
-}));
+// Use global mocks from jest.setup.js - no local overrides needed
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 // @ts-ignore
 global.fetch = mockFetch;
-const mockRouter = require("next/navigation").useRouter();
+
+// Get the mocked functions from the global mocks
+const mockRouter = (global as any).mockRouterInstance;
 const mockToast = toast as jest.Mocked<typeof toast>;
 
 // Helper function to click the category select
 const clickCategorySelect = () => {
-  const categorySelect = screen.getAllByTestId("select")[0]; // First select is for category
-  const selectTrigger = categorySelect.querySelector('[data-testid="select-trigger"]');
-  if (selectTrigger) {
-    fireEvent.click(selectTrigger);
+  // Find the category select by clicking on the trigger button
+  const selectButtons = screen.getAllByRole('button');
+  const categoryButton = selectButtons.find(button => 
+    button.textContent?.includes('Select equipment category') || 
+    button.textContent?.includes('Computers & Laptops')
+  );
+  if (categoryButton) {
+    fireEvent.click(categoryButton);
   }
 };
 
@@ -153,7 +88,7 @@ describe("EquipmentRequestForm", () => {
       expect(screen.getByText("Be specific about the type and model if known")).toBeInTheDocument();
       expect(screen.getByText((content) => content.includes("Minimum 20 characters"))).toBeInTheDocument();
       expect(screen.getByText("Before Submitting")).toBeInTheDocument();
-      expect(screen.getByText("Check if similar equipment is already available in the system")).toBeInTheDocument();
+      expect(screen.getByText((content) => content.includes("Check if similar equipment is already available"))).toBeInTheDocument();
     });
 
     it("should have default priority set to medium", () => {
@@ -165,10 +100,10 @@ describe("EquipmentRequestForm", () => {
 
   describe("form validation", () => {
     it("should show error for empty equipment type", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith("Please specify the equipment type");
@@ -176,14 +111,14 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should show error for unselected category", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith("Please select a category");
@@ -191,21 +126,20 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should show error for insufficient justification length", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Too short" },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith(
@@ -215,21 +149,20 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should accept valid justification length", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "This is a valid justification that meets the minimum 20 character requirement." },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockToast.error).not.toHaveBeenCalledWith(
@@ -239,15 +172,15 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should validate all required fields are filled", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       // Fill only some required fields
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         // Should still show category error
@@ -273,14 +206,13 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should submit form with valid data", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       // Fill all required fields
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: validFormData.equipmentType },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -294,8 +226,8 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.specificRequirements },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith("/api/requests", {
@@ -318,13 +250,12 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should trim whitespace from form fields", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "  MacBook Pro  " },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -335,8 +266,8 @@ describe("EquipmentRequestForm", () => {
         target: { value: "  Requirements with spaces  " },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith("/api/requests", {
@@ -356,13 +287,12 @@ describe("EquipmentRequestForm", () => {
     });
 
     it("should handle optional specific requirements field", async () => {
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: validFormData.equipmentType },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -370,8 +300,8 @@ describe("EquipmentRequestForm", () => {
       });
 
       // Leave specific requirements empty
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith("/api/requests", {
@@ -399,21 +329,20 @@ describe("EquipmentRequestForm", () => {
         json: () => Promise.resolve({ message: errorMessage }),
       } as Response);
 
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith(errorMessage);
@@ -423,24 +352,23 @@ describe("EquipmentRequestForm", () => {
     it("should handle network errors", async () => {
       mockFetch.mockRejectedValue(new Error("Network error"));
 
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith("Failed to submit request");
+        expect(mockToast.error).toHaveBeenCalledWith("Network error");
       });
     });
 
@@ -450,21 +378,20 @@ describe("EquipmentRequestForm", () => {
         json: () => Promise.resolve({}),
       } as Response);
 
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
       });
 
-      const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      const form = container.querySelector("form");
+      fireEvent.submit(form!);
 
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith("Failed to submit request");
@@ -479,21 +406,21 @@ describe("EquipmentRequestForm", () => {
         () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({ id: "req123" }) }), 100))
       );
 
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
       });
 
+      const form = container.querySelector("form");
       const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      fireEvent.submit(form!);
 
       expect(screen.getByText("Submitting...")).toBeInTheDocument();
       expect(submitButton).toBeDisabled();
@@ -508,21 +435,21 @@ describe("EquipmentRequestForm", () => {
         () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({ id: "req123" }) }), 100))
       );
 
-      render(<EquipmentRequestForm />);
+      const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
         target: { value: "MacBook Pro" },
       });
 
-      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
       });
 
+      const form = container.querySelector("form");
       const submitButton = screen.getByText("Submit Request");
-      fireEvent.click(submitButton);
+      fireEvent.submit(form!);
 
       expect(submitButton).toBeDisabled();
 

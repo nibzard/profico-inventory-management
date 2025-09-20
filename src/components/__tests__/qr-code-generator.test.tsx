@@ -127,11 +127,11 @@ describe("QRCodeGenerator", () => {
     const dialogContent = screen.getByText(mockTitle).closest("div");
     expect(dialogContent?.parentElement).toHaveClass("max-w-md");
 
-    const qrContainer = screen.getByTestId("qr-code").closest("div");
-    expect(qrContainer).toHaveClass("flex", "justify-center");
-
     const qrWrapper = screen.getByTestId("qr-code").parentElement;
     expect(qrWrapper).toHaveClass("p-4", "bg-white", "rounded-lg", "border");
+
+    const qrContainer = qrWrapper?.parentElement;
+    expect(qrContainer).toHaveClass("flex", "justify-center");
   });
 
   it("should render with default size when not specified", async () => {

@@ -122,6 +122,7 @@ export function AdvancedSearch({
     };
     setFilters(clearedFilters);
     onFiltersChange(clearedFilters);
+    setIsOpen(false);
   };
 
   const addTag = () => {

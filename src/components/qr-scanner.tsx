@@ -25,11 +25,18 @@ export default function QRScanner({ onScan, trigger }: QRScannerProps) {
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
   const startScanning = async () => {
-    if (!videoRef.current) return;
-
     try {
       setIsScanning(true);
       setError(null);
+      
+      // Wait for the video element to be rendered after state change
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      if (!videoRef.current) {
+        setError('Failed to access camera');
+        setIsScanning(false);
+        return;
+      }
       
       codeReaderRef.current = new BrowserMultiFormatReader();
       

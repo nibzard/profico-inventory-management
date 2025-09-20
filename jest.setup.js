@@ -67,7 +67,16 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock missing shadcn/ui components
 jest.mock('@/components/ui/badge', () => ({
-  Badge: ({ children, ...props }) => <span {...props}>{children}</span>,
+  Badge: ({ children, variant, ...props }) => {
+    const variantClasses = {
+      default: "bg-primary",
+      secondary: "bg-secondary", 
+      destructive: "bg-destructive",
+      outline: "border-input bg-background"
+    };
+    const className = `${variantClasses[variant] || variantClasses.default} ${props.className || ''}`;
+    return <span {...props} className={className}>{children}</span>;
+  },
 }))
 
 jest.mock('@/components/ui/checkbox', () => ({
@@ -81,10 +90,23 @@ jest.mock('@/components/ui/checkbox', () => ({
   ),
 }))
 
-jest.mock('@/components/ui/button', () => ({
-  Button: ({ children, asChild, ...props }) => 
-    asChild ? children : <button {...props}>{children}</button>,
-}))
+jest.mock('@/components/ui/button', () => {
+  const React = require('react');
+  return {
+    Button: ({ children, asChild, disabled, ...props }) => {
+      if (asChild) {
+        // Forward disabled state to children
+        return React.Children.map(children, child => {
+          if (React.isValidElement(child)) {
+            return React.cloneElement(child, { disabled });
+          }
+          return child;
+        });
+      }
+      return <button disabled={disabled} {...props}>{children}</button>;
+    },
+  };
+})
 
 // Mock more UI components that might be missing
 jest.mock('@/components/ui/card', () => ({

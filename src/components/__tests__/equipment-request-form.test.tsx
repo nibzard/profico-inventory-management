@@ -20,11 +20,78 @@ jest.mock("sonner", () => ({
   },
 }));
 
+// Mock the Select components
+jest.mock("@/components/ui/select", () => ({
+  Select: ({ children, onValueChange, value }: any) => (
+    <div data-testid="select" data-value={value}>
+      {children}
+      <button 
+        onClick={() => onValueChange?.("computers")}
+        data-testid="select-trigger"
+      >
+        {value || "Select equipment category"}
+      </button>
+    </div>
+  ),
+  SelectContent: ({ children }: any) => (
+    <div data-testid="select-content">
+      {children}
+    </div>
+  ),
+  SelectItem: ({ children, value, onClick }: any) => (
+    <div 
+      data-value={value} 
+      data-testid="select-item"
+      onClick={() => onClick?.(value)}
+      role="option"
+    >
+      {children}
+    </div>
+  ),
+  SelectTrigger: ({ children, onClick }: any) => (
+    <button 
+      data-testid="select-trigger"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  ),
+  SelectValue: ({ placeholder, children }: any) => (
+    <span data-placeholder={placeholder}>
+      {children || placeholder}
+    </span>
+  ),
+}));
+
+// Mock the Button component
+jest.mock("@/components/ui/button", () => ({
+  Button: ({ children, type, variant, disabled, onClick }: any) => (
+    <button 
+      type={type}
+      data-variant={variant}
+      disabled={disabled}
+      onClick={onClick}
+      className={variant === "outline" ? "outline-button" : ""}
+    >
+      {children}
+    </button>
+  ),
+}));
+
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 // @ts-ignore
 global.fetch = mockFetch;
 const mockRouter = require("next/navigation").useRouter();
 const mockToast = toast as jest.Mocked<typeof toast>;
+
+// Helper function to click the category select
+const clickCategorySelect = () => {
+  const categorySelect = screen.getAllByTestId("select")[0]; // First select is for category
+  const selectTrigger = categorySelect.querySelector('[data-testid="select-trigger"]');
+  if (selectTrigger) {
+    fireEvent.click(selectTrigger);
+  }
+};
 
 describe("EquipmentRequestForm", () => {
   beforeEach(() => {
@@ -53,7 +120,12 @@ describe("EquipmentRequestForm", () => {
     it("should render equipment categories in select dropdown", () => {
       render(<EquipmentRequestForm />);
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      // Click on the category select trigger (find the one with the placeholder)
+      const categorySelect = screen.getAllByTestId("select")[0]; // First select is for category
+      const selectTrigger = categorySelect.querySelector('[data-testid="select-trigger"]');
+      if (selectTrigger) {
+        fireEvent.click(selectTrigger);
+      }
 
       // Check for options in the dropdown (using role="option")
       expect(screen.getByRole("option", { name: "Computers & Laptops" })).toBeInTheDocument();
@@ -125,7 +197,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -149,7 +221,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -208,7 +280,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.equipmentType },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -252,7 +324,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "  MacBook Pro  " },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -290,7 +362,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.equipmentType },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -333,7 +405,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -357,7 +429,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -384,7 +456,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -413,7 +485,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -442,7 +514,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByText("Select equipment category"));
+      clickCategorySelect();
       fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
@@ -465,6 +537,11 @@ describe("EquipmentRequestForm", () => {
       render(<EquipmentRequestForm />);
 
       const cancelButton = screen.getByText("Cancel");
+      expect(cancelButton).toBeInTheDocument();
+      
+      // Debug: Check if the button has the right attributes
+      expect(cancelButton).toHaveAttribute('data-variant', 'outline');
+      
       fireEvent.click(cancelButton);
 
       expect(mockRouter.back).toHaveBeenCalled();

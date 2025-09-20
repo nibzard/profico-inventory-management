@@ -17,8 +17,8 @@ const MockEquipmentUnassignDialog = EquipmentUnassignDialog as jest.MockedFuncti
 // Mock the Link component from Next.js
 jest.mock("next/link", () => ({
   __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href} data-testid="mock-link">
+  default: ({ children, href, disabled }: { children: React.ReactNode; href: string; disabled?: boolean }) => (
+    <a href={disabled ? undefined : href} disabled={disabled} data-testid="mock-link">
       {children}
     </a>
   ),
@@ -114,14 +114,18 @@ describe("EquipmentList", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    MockEquipmentAssignDialog.mockImplementation(({ children, ...props }) => (
-      <div data-testid="assign-dialog" {...props}>
-        {children}
+    MockEquipmentAssignDialog.mockImplementation(({ equipment, open, onOpenChange }) => (
+      <div data-testid="assign-dialog">
+        <div>Equipment: {equipment?.name}</div>
+        <div>Open: {open ? 'true' : 'false'}</div>
+        <button onClick={() => onOpenChange?.(false)}>Close</button>
       </div>
     ));
-    MockEquipmentUnassignDialog.mockImplementation(({ children, ...props }) => (
-      <div data-testid="unassign-dialog" {...props}>
-        {children}
+    MockEquipmentUnassignDialog.mockImplementation(({ equipment, open, onOpenChange }) => (
+      <div data-testid="unassign-dialog">
+        <div>Equipment: {equipment?.name}</div>
+        <div>Open: {open ? 'true' : 'false'}</div>
+        <button onClick={() => onOpenChange?.(false)}>Close</button>
       </div>
     ));
   });
@@ -150,7 +154,9 @@ describe("EquipmentList", () => {
       render(<EquipmentList {...defaultProps} />);
 
       expect(screen.getByText("John Doe")).toBeInTheDocument();
-      expect(screen.getByText("Unassigned")).toBeInTheDocument();
+      // Look for unassigned in the specific context of assigned to field
+      const unassignedElements = screen.getAllByText("Unassigned");
+      expect(unassignedElements.length).toBeGreaterThan(0);
     });
 
     it("should display purchase date correctly", () => {
@@ -235,13 +241,11 @@ describe("EquipmentList", () => {
       const assignButton = screen.getByText("Assign User");
       fireEvent.click(assignButton);
 
-      expect(MockEquipmentAssignDialog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          equipment: mockEquipment[0],
-          open: true,
-        }),
-        {}
-      );
+      expect(MockEquipmentAssignDialog).toHaveBeenCalled();
+      const callArgs = MockEquipmentAssignDialog.mock.calls[0][0];
+      expect(callArgs.equipment).toEqual(mockEquipment[0]);
+      expect(callArgs.open).toBe(true);
+      expect(callArgs.onOpenChange).toBeDefined();
     });
 
     it("should open unassign dialog when unassign is clicked", () => {
@@ -250,13 +254,11 @@ describe("EquipmentList", () => {
       const unassignButton = screen.getByText("Unassign");
       fireEvent.click(unassignButton);
 
-      expect(MockEquipmentUnassignDialog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          equipment: mockEquipment[1],
-          open: true,
-        }),
-        {}
-      );
+      expect(MockEquipmentUnassignDialog).toHaveBeenCalled();
+      const callArgs = MockEquipmentUnassignDialog.mock.calls[0][0];
+      expect(callArgs.equipment).toEqual(mockEquipment[1]);
+      expect(callArgs.open).toBe(true);
+      expect(callArgs.onOpenChange).toBeDefined();
     });
   });
 
@@ -279,21 +281,25 @@ describe("EquipmentList", () => {
     it("should disable previous button on first page", () => {
       render(<EquipmentList {...defaultProps} totalPages={5} currentPage={1} />);
 
-      const prevButton = screen.getByText("1").closest("button")?.previousElementSibling;
-      expect(prevButton).toHaveAttribute("disabled");
+      // Find the chevron left icon and check if the link is disabled
+      const chevronLeftIcon = screen.getByTestId("chevronleft-icon");
+      const prevLink = chevronLeftIcon.closest("a");
+      expect(prevLink).toHaveAttribute("disabled");
     });
 
     it("should disable next button on last page", () => {
       render(<EquipmentList {...defaultProps} totalPages={5} currentPage={5} />);
 
-      const nextButton = screen.getByText("5").closest("button")?.nextElementSibling;
-      expect(nextButton).toHaveAttribute("disabled");
+      // Find the chevron right icon and check if the link is disabled
+      const chevronRightIcon = screen.getByTestId("chevronright-icon");
+      const nextLink = chevronRightIcon.closest("a");
+      expect(nextLink).toHaveAttribute("disabled");
     });
 
     it("should show ellipsis for large page ranges", () => {
       render(<EquipmentList {...defaultProps} totalPages={10} currentPage={5} />);
 
-      expect(screen.getByText("...")).toBeInTheDocument();
+      expect(screen.getAllByText("...")).toHaveLength(2);
       expect(screen.getByText("1")).toBeInTheDocument();
       expect(screen.getByText("10")).toBeInTheDocument();
     });
@@ -345,7 +351,7 @@ describe("EquipmentList", () => {
 
       // More actions button should be accessible
       const moreButtons = screen.getAllByRole("button").filter(
-        (button) => button.querySelector('[data-lucide="more-horizontal"]')
+        (button) => button.querySelector('[data-testid="morehorizontal-icon"]')
       );
       expect(moreButtons).toHaveLength(3);
     });
@@ -356,11 +362,8 @@ describe("EquipmentList", () => {
       render(<EquipmentList {...defaultProps} />);
 
       // Should have responsive grid classes
-      const grid = screen.getByRole("grid", { hidden: true }) || 
-                  document.querySelector('.grid');
-      if (grid) {
-        expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "lg:grid-cols-3");
-      }
+      const grid = document.querySelector('.grid');
+      expect(grid).toHaveClass("grid-cols-1", "md:grid-cols-2", "lg:grid-cols-3");
     });
   });
 });

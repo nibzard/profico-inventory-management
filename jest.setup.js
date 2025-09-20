@@ -164,6 +164,37 @@ jest.mock('@/components/ui/label', () => ({
   Label: ({ children, ...props }) => <label {...props}>{children}</label>,
 }))
 
+// Mock separator component
+jest.mock('@/components/ui/separator', () => ({
+  Separator: ({ ...props }) => <hr {...props} />,
+}))
+
+// Mock popover component
+jest.mock('@/components/ui/popover', () => ({
+  Popover: ({ children, ...props }) => <div {...props}>{children}</div>,
+  PopoverTrigger: ({ children, asChild, ...props }) => 
+    asChild ? children : <button {...props}>{children}</button>,
+  PopoverContent: ({ children, ...props }) => <div {...props}>{children}</div>,
+}))
+
+
+// Mock avatar component
+jest.mock('@/components/ui/avatar', () => ({
+  Avatar: ({ children, ...props }) => <div {...props}>{children}</div>,
+  AvatarImage: ({ ...props }) => <img {...props} />,
+  AvatarFallback: ({ children, ...props }) => <div {...props}>{children}</div>,
+}))
+
+// Mock dropdown menu component
+jest.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children, ...props }) => <div {...props}>{children}</div>,
+  DropdownMenuTrigger: ({ children, asChild, ...props }) => 
+    asChild ? children : <button {...props}>{children}</button>,
+  DropdownMenuContent: ({ children, ...props }) => <div {...props}>{children}</div>,
+  DropdownMenuItem: ({ children, asChild, ...props }) => 
+    asChild ? children : <div {...props}>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+}))
 
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
@@ -182,5 +213,12 @@ jest.mock('lucide-react', () => ({
   Camera: () => <svg data-testid="camera-icon" />,
   QrCode: () => <svg data-testid="qrcode-icon" />,
   Scan: () => <svg data-testid="scan-icon" />,
+  Eye: () => <svg data-testid="eye-icon" />,
+  Edit: () => <svg data-testid="edit-icon" />,
+  CheckCircle: () => <svg data-testid="checkcircle-icon" />,
+  XCircle: () => <svg data-testid="xcircle-icon" />,
+  Clock: () => <svg data-testid="clock-icon" />,
+  ChevronLeft: () => <svg data-testid="chevronleft-icon" />,
+  ChevronRight: () => <svg data-testid="chevronright-icon" />,
 }))
 

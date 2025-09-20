@@ -2,22 +2,23 @@
 // ABOUTME: Handles new user account creation with email/password and role assignment
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { userSchemas, InputSanitizer, ValidationHelper } from "@/lib/validation";
+import { withSecurity } from "@/lib/security-middleware";
 
-const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "team_lead", "user"]).default("user"),
-});
-
-export async function POST(req: NextRequest) {
+async function registerHandler(req: NextRequest) {
   try {
     const body = await req.json();
-    const validatedData = registerSchema.parse(body);
+    const validatedData = userSchemas.create.parse(body);
 
-    const { name, email, password, role } = validatedData;
+    // Sanitize inputs
+    const { name, email, password, role } = {
+      name: InputSanitizer.sanitizeString(validatedData.name),
+      email: InputSanitizer.sanitizeEmail(validatedData.email),
+      password: validatedData.password, // Don't sanitize password - it will be hashed
+      role: validatedData.role,
+    };
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: "Validation failed", details: error.issues },
         { status: 400 }
       );
     }
@@ -68,4 +69,13 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  return withSecurity(req, registerHandler, {
+    requireAuth: false,
+    enableRateLimit: true,
+    rateLimitWindow: 15 * 60 * 1000, // 15 minutes
+    rateLimitMax: 5, // Limit registration attempts
+  });
 }

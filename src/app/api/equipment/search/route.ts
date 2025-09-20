@@ -1,114 +1,94 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ValidationHelper } from '@/lib/validation';
+import { withSecurity } from '@/lib/security-middleware';
 
 export async function GET(request: Request) {
-  try {
-    const session = await auth();
+  return withSecurity(request as any, async (req) => {
+    try {
+      const { searchParams } = new URL(req.url);
+      
+      // Apply role-based filtering based on authenticated user
+      const user = (req as any).user;
+      
+      // Validate and sanitize pagination parameters
+    const pagination = ValidationHelper.validatePaginationParams(searchParams);
+    const offset = (pagination.page - 1) * pagination.limit;
     
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '12');
-    const offset = (page - 1) * limit;
+    // Validate and sanitize search parameters
+    const filters = ValidationHelper.validateSearchParams(searchParams);
 
     // Build the where clause based on filters
     const where: Record<string, unknown> = {};
 
-    // Search filters
-    const search = searchParams.get('search');
-    if (search) {
+    // Apply validated and sanitized filters
+    if (filters.search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { serialNumber: { contains: search, mode: 'insensitive' } },
-        { brand: { contains: search, mode: 'insensitive' } },
-        { model: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { notes: { contains: search, mode: 'insensitive' } },
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { serialNumber: { contains: filters.search, mode: 'insensitive' } },
+        { brand: { contains: filters.search, mode: 'insensitive' } },
+        { model: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { notes: { contains: filters.search, mode: 'insensitive' } },
       ];
     }
 
-    // Category filter
-    const category = searchParams.get('category');
-    if (category && category !== 'all') {
-      where.category = category;
+    if (filters.category && filters.category !== 'all') {
+      where.category = filters.category;
     }
 
-    // Status filter
-    const status = searchParams.get('status');
-    if (status && status !== 'all') {
-      where.status = status;
+    if (filters.status && filters.status !== 'all') {
+      where.status = filters.status;
     }
 
-    // Owner filter
-    const owner = searchParams.get('owner');
-    if (owner && owner !== 'all') {
-      if (owner === 'unassigned') {
+    if (filters.owner && filters.owner !== 'all') {
+      if (filters.owner === 'unassigned') {
         where.currentOwnerId = null;
       } else {
-        where.currentOwnerId = owner;
+        where.currentOwnerId = filters.owner;
       }
     }
 
-    // Team filter
-    const team = searchParams.get('team');
-    if (team && team !== 'all') {
+    if (filters.team && filters.team !== 'all') {
       where.currentOwner = {
-        teamId: team,
+        teamId: filters.team,
       };
     }
 
-    // Brand filter
-    const brand = searchParams.get('brand');
-    if (brand) {
-      where.brand = { contains: brand, mode: 'insensitive' };
+    if (filters.brand) {
+      where.brand = { contains: filters.brand, mode: 'insensitive' };
     }
 
-    // Location filter
-    const location = searchParams.get('location');
-    if (location) {
-      where.location = { contains: location, mode: 'insensitive' };
+    if (filters.location) {
+      where.location = { contains: filters.location, mode: 'insensitive' };
     }
 
-    // Purchase method filter
-    const purchaseMethod = searchParams.get('purchaseMethod');
-    if (purchaseMethod && purchaseMethod !== 'all') {
-      where.purchaseMethod = purchaseMethod;
+    if (filters.purchaseMethod && filters.purchaseMethod !== 'all') {
+      where.purchaseMethod = filters.purchaseMethod;
     }
 
-    // Price range filter
-    const priceMin = searchParams.get('priceMin');
-    const priceMax = searchParams.get('priceMax');
-    if (priceMin || priceMax) {
-      where.purchasePrice = {};
-      if (priceMin) {
-        where.purchasePrice.gte = parseFloat(priceMin);
+    if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
+      (where as any).purchasePrice = {};
+      if (filters.priceMin !== null) {
+        (where as any).purchasePrice.gte = filters.priceMin;
       }
-      if (priceMax) {
-        where.purchasePrice.lte = parseFloat(priceMax);
+      if (filters.priceMax !== null) {
+        (where as any).purchasePrice.lte = filters.priceMax;
       }
     }
 
-    // Date range filter
-    const purchaseDateFrom = searchParams.get('purchaseDateFrom');
-    const purchaseDateTo = searchParams.get('purchaseDateTo');
-    if (purchaseDateFrom || purchaseDateTo) {
-      where.purchaseDate = {};
-      if (purchaseDateFrom) {
-        where.purchaseDate.gte = new Date(purchaseDateFrom);
+    if (filters.purchaseDateFrom || filters.purchaseDateTo) {
+      (where as any).purchaseDate = {};
+      if (filters.purchaseDateFrom) {
+        (where as any).purchaseDate.gte = new Date(filters.purchaseDateFrom);
       }
-      if (purchaseDateTo) {
-        where.purchaseDate.lte = new Date(purchaseDateTo);
+      if (filters.purchaseDateTo) {
+        (where as any).purchaseDate.lte = new Date(filters.purchaseDateTo);
       }
     }
 
-    // Tags filter
-    const tags = searchParams.get('tags');
-    if (tags) {
-      const tagArray = tags.split(',').filter(Boolean);
+    if (filters.tags) {
+      const tagArray = filters.tags.split(',').filter(Boolean);
       if (tagArray.length > 0) {
         where.AND = tagArray.map((tag) => ({
           OR: [
@@ -121,11 +101,11 @@ export async function GET(request: Request) {
     }
 
     // Apply role-based filtering
-    if (session.user.role === 'user') {
+    if (user?.role === 'user') {
       // Regular users can only see equipment assigned to them or available equipment
       where.OR = [
         ...((where.OR || []) as Array<Record<string, unknown>>),
-        { currentOwnerId: session.user.id },
+        { currentOwnerId: user.id },
         { status: 'available' },
       ];
     }
@@ -156,29 +136,45 @@ export async function GET(request: Request) {
           { name: 'asc' },
         ],
         skip: offset,
-        take: limit,
+        take: pagination.limit,
       }),
       prisma.equipment.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(totalCount / pagination.limit);
+
+    // Sanitize the response data
+    const sanitizedEquipment = ValidationHelper.sanitizeDbResults(equipment);
 
     return NextResponse.json({
-      equipment,
+      equipment: sanitizedEquipment,
       pagination: {
-        currentPage: page,
+        currentPage: pagination.page,
         totalPages,
         totalCount,
-        limit,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
+        limit: pagination.limit,
+        hasNext: pagination.page < totalPages,
+        hasPrev: pagination.page > 1,
       },
     });
   } catch (error) {
     console.error('Error searching equipment:', error);
+    
+    // Handle validation errors specifically
+    if (error instanceof Error && error.message.includes('Invalid')) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Failed to search equipment' },
       { status: 500 }
     );
   }
+  }, {
+    requireAuth: true,
+    enableRateLimit: true,
+  });
 }

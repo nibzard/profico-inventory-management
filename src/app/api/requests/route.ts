@@ -1,56 +1,46 @@
 // ABOUTME: API endpoint for equipment request management operations
 // ABOUTME: Handles POST requests for creating new equipment requests
 
+import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-
-const createRequestSchema = z.object({
-  equipmentType: z
-    .string()
-    .min(2, "Equipment type must be at least 2 characters"),
-  category: z.string(),
-  justification: z
-    .string()
-    .min(20, "Justification must be at least 20 characters"),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
-  specificRequirements: z.string().optional(),
-});
+import { requestSchemas, InputSanitizer, ValidationHelper } from "@/lib/validation";
+import { withSecurity } from "@/lib/security-middleware";
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const userId = searchParams.get("userId");
-    const needsApproval = searchParams.get("needsApproval") === "true";
+  return withSecurity(request, async (req) => {
+    try {
+      const { searchParams } = new URL(req.url);
+      
+      // Validate and sanitize search parameters
+      const validatedParams = ValidationHelper.validateSearchParams(searchParams);
+      
+      const status = validatedParams.status;
+      const userId = validatedParams.owner;
+      const needsApproval = searchParams.get("needsApproval") === "true";
+      const user = (req as any).user;
 
     const whereClause: Record<string, unknown> = {};
 
     // Filter by status if provided
-    if (status) {
+    if (status && status !== 'all') {
       whereClause.status = status;
     }
 
     // Regular users can only see their own requests
-    if (session.user.role === "user") {
-      whereClause.requesterId = session.user.id;
+    if (user.role === "user") {
+      whereClause.requesterId = user.id;
     } else if (userId) {
       whereClause.requesterId = userId;
     }
 
     // For team leads/admins, filter for requests needing their approval
-    if (needsApproval && session.user.role !== "user") {
-      if (session.user.role === "team_lead") {
+    if (needsApproval && user.role !== "user") {
+      if (user.role === "team_lead") {
         whereClause.status = "pending";
         whereClause.teamLeadApproval = null;
-      } else if (session.user.role === "admin") {
+      } else if (user.role === "admin") {
         whereClause.status = "pending";
         whereClause.teamLeadApproval = true;
         whereClause.adminApproval = null;
@@ -73,66 +63,94 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(requests);
+    // Sanitize the response data
+    const sanitizedRequests = ValidationHelper.sanitizeDbResults(requests);
+
+    return NextResponse.json(sanitizedRequests);
   } catch (error) {
     console.error("Requests fetch error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const validatedData = createRequestSchema.parse(body);
-
-    // Create equipment request
-    const equipmentRequest = await db.equipmentRequest.create({
-      data: {
-        requesterId: session.user.id,
-        equipmentType: validatedData.equipmentType,
-        justification: validatedData.justification,
-        priority: validatedData.priority,
-        status: "pending",
-      },
-      include: {
-        requester: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-      },
-    });
-
-    // TODO: Send notification email to team lead
-
-    return NextResponse.json(
-      {
-        message: "Equipment request created successfully",
-        id: equipmentRequest.id,
-        request: equipmentRequest,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Request creation error:", error);
-
-    if (error instanceof z.ZodError) {
+    
+    // Handle validation errors specifically
+    if (error instanceof Error && error.message.includes('Invalid')) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        { error: error.message },
         { status: 400 }
       );
     }
-
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
+  }, {
+    requireAuth: true,
+    requiredRoles: ['user', 'team_lead', 'admin'],
+    enableRateLimit: true,
+  });
+}
+
+export async function POST(request: NextRequest) {
+  return withSecurity(request, async (req) => {
+    try {
+      const user = (req as any).user;
+      const body = await req.json();
+      
+      // Validate and sanitize input
+      const validatedData = requestSchemas.create.parse(body);
+      const sanitizedData = {
+        equipmentType: InputSanitizer.sanitizeString(validatedData.equipmentType),
+        justification: InputSanitizer.sanitizeString(validatedData.justification),
+        priority: validatedData.priority,
+        specificRequirements: validatedData.specificRequirements 
+          ? InputSanitizer.sanitizeString(validatedData.specificRequirements) 
+          : undefined,
+        budget: validatedData.budget,
+        neededBy: validatedData.neededBy,
+      };
+
+      // Create equipment request
+      const equipmentRequest = await db.equipmentRequest.create({
+        data: {
+          requesterId: user.id,
+          ...sanitizedData,
+          status: "pending",
+        },
+        include: {
+          requester: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+        },
+      });
+
+      // TODO: Send notification email to team lead
+
+      return NextResponse.json(
+        {
+          message: "Equipment request created successfully",
+          id: equipmentRequest.id,
+          request: equipmentRequest,
+        },
+        { status: 201 }
+      );
+    } catch (error) {
+      console.error("Request creation error:", error);
+
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: "Invalid input data", details: error.issues },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      );
+    }
+  }, {
+    requireAuth: true,
+    requiredRoles: ['user', 'team_lead', 'admin'],
+    enableRateLimit: true,
+  });
 }

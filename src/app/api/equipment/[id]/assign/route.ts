@@ -1,35 +1,38 @@
 // ABOUTME: API endpoint for assigning equipment to users
 // ABOUTME: Handles equipment assignment workflow with validation and history tracking
 
-import { auth } from "@/lib/auth";
+import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { commonSchemas, InputSanitizer } from "@/lib/validation";
+import { withSecurity } from "@/lib/security-middleware";
 
-const assignEquipmentSchema = z.object({
-  userId: z.string().cuid(),
-  notes: z.string().optional(),
-});
-
-export async function POST(
+async function assignEquipmentHandler(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check permissions
-    if (session.user.role === "user") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const equipmentId = params.id;
     const body = await request.json();
-    const { userId, notes } = assignEquipmentSchema.parse(body);
+    
+    // Validate input
+    const validatedData = commonSchemas.cuid.safeParse(equipmentId);
+    if (!validatedData.success) {
+      return NextResponse.json(
+        { error: "Invalid equipment ID" },
+        { status: 400 }
+      );
+    }
+
+    const assignSchema = z.object({
+      userId: commonSchemas.cuid,
+      notes: z.string().max(1000).optional(),
+    });
+    
+    const { userId, notes } = assignSchema.parse(body);
+    
+    // Sanitize inputs
+    const sanitizedNotes = notes ? InputSanitizer.sanitizeString(notes) : null;
 
     // Verify equipment exists and is available
     const equipment = await db.equipment.findUnique({
@@ -85,7 +88,7 @@ export async function POST(
           equipmentId,
           toUserId: userId,
           action: "assigned",
-          notes: notes || `Assigned by ${session.user.name}`,
+          notes: sanitizedNotes || `Assigned by ${(request as any).user?.name || 'System'}`,
         },
       });
 
@@ -101,7 +104,7 @@ export async function POST(
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        { error: "Validation failed", details: error.issues },
         { status: 400 }
       );
     }
@@ -111,4 +114,16 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return withSecurity(request, (req) => assignEquipmentHandler(req, { params }), {
+    requireAuth: true,
+    requiredRoles: ['team_lead', 'admin'],
+    enableRateLimit: true,
+    enableCSRF: true,
+  });
 }

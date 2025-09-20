@@ -202,3 +202,4 @@ The immediate development priorities are outlined in todo.md:
 
 Refer to todo.md for the complete 6-phase development roadmap with detailed task breakdowns and priority levels.
 - Everytime before starting any work use task master sub agent to check todo.md and understand what was done and what should we work on next.
+- After each task is done always engage todo-agent and git-master.

@@ -128,4 +128,8 @@ uploads/
 # Claude development files
 .claude/
 
+# SSL certificates for development
+certs/
+mkcert-v*-linux-amd64
+
 /src/generated/prisma

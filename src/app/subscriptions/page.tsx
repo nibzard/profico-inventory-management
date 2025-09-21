@@ -153,14 +153,22 @@ export default async function SubscriptionsPage({
             Manage software licenses and subscriptions
           </p>
         </div>
-        {(user.role === "admin" || user.role === "team_lead") && (
-          <Button asChild>
-            <Link href="/subscriptions/add">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Subscription
+        <div className="flex space-x-3">
+          {(user.role === "admin" || user.role === "team_lead") && (
+            <Button asChild>
+              <Link href="/subscriptions/add">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Subscription
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" asChild>
+            <Link href="/subscriptions/billing">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Billing Management
             </Link>
           </Button>
-        )}
+        </div>
       </div>
 
       {/* Statistics Cards */}

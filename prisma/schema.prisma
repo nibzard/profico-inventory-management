@@ -242,8 +242,31 @@ model Subscription {
 
   // Relations
   assignedUser User @relation(fields: [assignedUserId], references: [id])
+  subscriptionInvoices SubscriptionInvoice[]
 
   @@map("subscriptions")
+}
+
+model SubscriptionInvoice {
+  id            String   @id @default(cuid())
+  subscriptionId String
+  vendor        String
+  amount        Float
+  dueDate       DateTime
+  status        String   @default("pending") // "pending", "paid", "overdue", "cancelled"
+  invoiceNumber String?
+  description   String?
+  invoiceUrl    String?
+  fileName      String?
+  fileType      String?
+  fileSize      Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("subscription_invoices")
 }
 
 model InventoryCheck {

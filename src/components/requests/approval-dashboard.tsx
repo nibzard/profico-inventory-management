@@ -63,11 +63,11 @@ import {
   Download,
 } from "lucide-react";
 import Link from "next/link";
-import type { EquipmentRequest, User, Equipment } from "@prisma/client";
+import type { EquipmentRequest, User as UserType, Equipment } from "@prisma/client";
 
 interface RequestWithRelations extends EquipmentRequest {
-  requester: User;
-  approver: User | null;
+  requester: UserType;
+  approver: UserType | null;
   equipment: Equipment | null;
 }
 
@@ -521,7 +521,7 @@ export function ApprovalDashboard({
                           <AvatarFallback className="text-xs">
                             {request.requester.name
                               .split(" ")
-                              .map((n) => n[0])
+                              .map((n: string) => n[0])
                               .join("")}
                           </AvatarFallback>
                         </Avatar>

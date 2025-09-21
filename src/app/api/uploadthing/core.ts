@@ -29,7 +29,7 @@ export const ourFileRouter = {
       return { fileId: uploadedFile.id };
     }),
 
-  invoice: f({ image: { maxFileSize: "10MB", maxFileCount: 5 }, pdf: { maxFileSize: "10MB", maxFileCount: 5 } })
+  invoice: f({ image: { maxFileSize: "4MB", maxFileCount: 5 }, pdf: { maxFileSize: "4MB", maxFileCount: 5 } })
     .middleware(async ({ req }) => {
       const session = await auth();
 

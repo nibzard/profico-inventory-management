@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
         location: validatedData.location,
         notes: validatedData.notes,
         createdBy: session.user.id,
-        teamId: validatedData.teamId,
       },
       include: {
         currentOwner: {

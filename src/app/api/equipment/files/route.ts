@@ -258,23 +258,27 @@ export async function DELETE(request: NextRequest) {
       const currentPhotos = JSON.parse(file.equipment.photos);
       const updatedPhotos = currentPhotos.filter((photo: any) => photo.id !== fileId);
       
-      await db.equipment.update({
-        where: { id: file.equipmentId },
+      if (file.equipmentId) {
+        await db.equipment.update({
+          where: { id: file.equipmentId },
+          data: {
+            photos: JSON.stringify(updatedPhotos),
+            updatedAt: new Date(),
+          },
+        });
+      }
+    }
+
+    // Create history record if equipmentId exists
+    if (file.equipmentId) {
+      await db.equipmentHistory.create({
         data: {
-          photos: JSON.stringify(updatedPhotos),
-          updatedAt: new Date(),
+          equipmentId: file.equipmentId,
+          action: "file_deleted",
+          notes: `Deleted file: ${file.name}`,
         },
       });
     }
-
-    // Create history record
-    await db.equipmentHistory.create({
-      data: {
-        equipmentId: file.equipmentId,
-        action: "file_deleted",
-        notes: `Deleted file: ${file.name}`,
-      },
-    });
 
     return NextResponse.json({
       message: "File deleted successfully",

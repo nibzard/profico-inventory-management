@@ -114,7 +114,7 @@ export function RequestHistory({ requestId }: RequestHistoryProps) {
   };
 
   const getStatusBadge = (status?: string) => {
-    if (!status) return null;
+    if (!status) return <></>;
 
     const variants = {
       pending: "secondary",
@@ -278,7 +278,7 @@ export function RequestHistory({ requestId }: RequestHistoryProps) {
                       {entry.metadata?.rejectionReason && (
                         <div className="bg-red-50 border border-red-200 p-3 rounded-lg mt-2">
                           <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
-                          <p className="text-sm text-red-700">{entry.metadata.rejectionReason}</p>
+                          <p className="text-sm text-red-700">{String(entry.metadata.rejectionReason)}</p>
                         </div>
                       )}
 
@@ -286,7 +286,7 @@ export function RequestHistory({ requestId }: RequestHistoryProps) {
                       {entry.metadata?.equipmentName && (
                         <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg mt-2">
                           <p className="text-sm font-medium text-purple-800">Equipment Assigned:</p>
-                          <p className="text-sm text-purple-700">{entry.metadata.equipmentName}</p>
+                          <p className="text-sm text-purple-700">{String(entry.metadata.equipmentName)}</p>
                         </div>
                       )}
                     </div>

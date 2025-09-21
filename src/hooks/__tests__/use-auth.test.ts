@@ -68,10 +68,7 @@ describe("useAuth", () => {
 
   describe("checkRole", () => {
     it("should return false when user is not authenticated", () => {
-      mockUseSession.mockReturnValue({
-        data: null,
-        status: "unauthenticated",
-      });
+      mockUseSession.mockReturnValue(createMockSession(null, "unauthenticated"));
 
       const { result } = renderHook(() => useAuth());
 
@@ -94,17 +91,12 @@ describe("useAuth", () => {
     });
 
     it("should return false when user does not have the required role", () => {
-      const userSession = {
-        data: {
-          user: {
-            id: "2",
-            name: "Regular User",
-            email: "user@example.com",
-            role: "user" as const,
-          },
-        },
-        status: "authenticated" as const,
-      };
+      const userSession = createMockSession({
+        id: "2",
+        name: "Regular User",
+        email: "user@example.com",
+        role: "user" as const,
+      }, "authenticated");
 
       mockUseSession.mockReturnValue(userSession);
 
@@ -114,17 +106,12 @@ describe("useAuth", () => {
     });
 
     it("should return false when user has no role", () => {
-      const sessionWithoutRole = {
-        data: {
-          user: {
-            id: "3",
-            name: "User Without Role",
-            email: "norole@example.com",
-            role: undefined,
-          },
-        },
-        status: "authenticated" as const,
-      };
+      const sessionWithoutRole = createMockSession({
+        id: "3",
+        name: "User Without Role",
+        email: "norole@example.com",
+        role: undefined,
+      }, "authenticated");
 
       mockUseSession.mockReturnValue(sessionWithoutRole);
 
@@ -209,10 +196,7 @@ describe("useAuth", () => {
 
     describe("unauthenticated user permissions", () => {
       beforeEach(() => {
-        mockUseSession.mockReturnValue({
-          data: null,
-          status: "unauthenticated",
-        });
+        mockUseSession.mockReturnValue(createMockSession(null, "unauthenticated"));
       });
 
       it("should have no permissions", () => {

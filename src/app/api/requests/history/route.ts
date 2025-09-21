@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      let history;
-      let total;
+      let history: any[] = [];
+      let total: number = 0;
 
       if (validatedParams.requestId) {
         // Get history for a specific request
@@ -79,14 +79,18 @@ export async function GET(request: NextRequest) {
         // Admins and team leads can view recent system-wide history
         history = await RequestHistoryService.getRecentHistory(validatedParams.limit);
         total = history.length;
-      } else {
+      } else if (user) {
         // Regular users can view their own recent history
-        history = await RequestHistoryService.getUserHistory(user.id, validatedParams.limit);
+        history = await RequestHistoryService.getUserHistory(user.id || '', validatedParams.limit);
         total = history.length;
+      } else {
+        // If no user, return empty history
+        history = [];
+        total = 0;
       }
 
       // Apply pagination
-      const paginatedHistory = history.slice(validatedParams.offset, validatedParams.offset + validatedParams.limit);
+      const paginatedHistory = history.slice(validatedParams.offset || 0, (validatedParams.offset || 0) + (validatedParams.limit || 50));
 
       return NextResponse.json({
         history: paginatedHistory,

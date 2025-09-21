@@ -135,11 +135,7 @@ export function AssignEquipmentForm({ request, availableEquipment }: AssignEquip
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-600">Equipment Type</p>
-              <p className="font-medium">{request.equipmentType}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Category</p>
-              <p className="font-medium capitalize">{request.category}</p>
+              <p className="font-medium capitalize">{request.equipmentType}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Priority</p>

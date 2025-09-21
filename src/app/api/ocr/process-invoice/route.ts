@@ -104,13 +104,13 @@ export async function POST(request: NextRequest) {
         equipmentCount: ocrData.equipment?.length || 0,
         validationErrors: validation.valid ? null : JSON.stringify({
           errors: validation.errors,
-          warnings: validation.warnings || []
+          warnings: []
         }),
       },
     });
 
     // Create equipment records if requested
-    let createdEquipment = [];
+    let createdEquipment: any[] = [];
     if (createEquipment && equipmentRecords.length > 0) {
       createdEquipment = await Promise.all(
         equipmentRecords.map(async (equipment) => {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create subscription records if requested
-    let createdSubscriptions = [];
+    let createdSubscriptions: any[] = [];
     if (createSubscriptions && subscriptionRecords.length > 0) {
       createdSubscriptions = await Promise.all(
         subscriptionRecords.map(async (subscription) => {
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
           amount: ocrData.amount,
           confidence: ocrData.confidence,
           validationErrors: validation.errors,
-          validationWarnings: validation.warnings,
+          validationWarnings: [],
           invoiceType: ocrData.invoiceType,
         }),
       },

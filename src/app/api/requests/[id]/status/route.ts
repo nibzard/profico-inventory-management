@@ -58,9 +58,7 @@ export async function GET(
               team: {
                 select: {
                   name: true,
-                  leader: {
-                    select: { name: true, email: true }
-                  }
+                  leaderId: true
                 }
               }
             },
@@ -69,7 +67,7 @@ export async function GET(
             select: { id: true, name: true, email: true, role: true }
           },
           equipment: {
-            select: { id: true, name: true, serialNumber: true, status: true, assignedTo: { select: { name: true, email: true } } }
+            select: { id: true, name: true, serialNumber: true, status: true, currentOwner: { select: { name: true, email: true } } }
           },
         }
       });

@@ -88,7 +88,7 @@ export async function POST(
       const equipment = await db.equipment.findUnique({
         where: { id: validatedData.equipmentId },
         include: {
-          assignedTo: {
+          currentOwner: {
             select: { id: true, name: true, email: true }
           }
         }
@@ -118,7 +118,7 @@ export async function POST(
             equipmentId: validatedData.equipmentId,
             status: 'fulfilled',
             updatedAt: new Date(),
-            assignmentNotes: validatedData.notes,
+            statusNotes: validatedData.notes,
           },
           include: {
             requester: {
@@ -138,12 +138,11 @@ export async function POST(
           where: { id: validatedData.equipmentId },
           data: {
             status: 'assigned',
-            assignedToId: currentRequest.requesterId,
-            assignedAt: new Date(),
+            currentOwnerId: currentRequest.requesterId,
             updatedAt: new Date(),
           },
           include: {
-            assignedTo: {
+            currentOwner: {
               select: { id: true, name: true, email: true }
             }
           }
@@ -153,10 +152,9 @@ export async function POST(
         await tx.equipmentHistory.create({
           data: {
             equipmentId: validatedData.equipmentId,
-            userId: currentRequest.requesterId,
+            toUserId: currentRequest.requesterId,
             action: 'assigned',
             notes: `Assigned via equipment request #${requestId.slice(-8)}. ${validatedData.notes || ''}`,
-            performedBy: user.id,
           }
         });
 
@@ -263,7 +261,7 @@ export async function DELETE(
             select: { id: true, name: true, email: true, role: true }
           },
           equipment: {
-            select: { id: true, name: true, serialNumber: true, assignedToId: true }
+            select: { id: true, name: true, serialNumber: true, currentOwnerId: true }
           }
         }
       });
@@ -305,15 +303,14 @@ export async function DELETE(
 
         // Update the equipment
         const updatedEquipment = await tx.equipment.update({
-          where: { id: currentRequest.equipmentId },
+          where: { id: currentRequest.equipmentId || '' },
           data: {
             status: 'available',
-            assignedToId: null,
-            assignedAt: null,
+            currentOwnerId: null,
             updatedAt: new Date(),
           },
           include: {
-            assignedTo: {
+            currentOwner: {
               select: { id: true, name: true, email: true }
             }
           }
@@ -322,11 +319,10 @@ export async function DELETE(
         // Create equipment history record
         await tx.equipmentHistory.create({
           data: {
-            equipmentId: currentRequest.equipmentId,
-            userId: currentRequest.requesterId,
+            equipmentId: currentRequest.equipmentId || '',
+            fromUserId: currentRequest.requesterId,
             action: 'unassigned',
             notes: `Unassigned from equipment request #${requestId.slice(-8)} by admin`,
-            performedBy: user.id,
           }
         });
 

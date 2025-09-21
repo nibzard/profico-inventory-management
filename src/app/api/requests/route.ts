@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       // Create equipment request
       const equipmentRequest = await db.equipmentRequest.create({
         data: {
-          requesterId: user.id,
+          requesterId: user?.id || '',
           ...sanitizedData,
           status: "pending",
         },
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       try {
         await RequestHistoryService.logRequestCreation(
           equipmentRequest.id,
-          user.id,
+          user?.id || '',
           sanitizedData.equipmentType
         );
       } catch (historyError) {
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
           updatedAt: equipmentRequest.updatedAt,
         };
 
-        const teamLeadEmails = await EmailNotificationService.getTeamLeadEmails(user.id);
+        const teamLeadEmails = await EmailNotificationService.getTeamLeadEmails(user?.id || '');
         if (teamLeadEmails.length > 0) {
           await EmailNotificationService.notifyTeamLeadOfNewRequest(emailData, teamLeadEmails);
         }

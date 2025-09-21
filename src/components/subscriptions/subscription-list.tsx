@@ -51,6 +51,7 @@ export function SubscriptionList({
   currentPage,
   totalPages,
   userRole,
+  userId,
 }: SubscriptionListProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 

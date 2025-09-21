@@ -28,6 +28,7 @@ export interface RequestHistoryEntry {
     name: string;
     email: string;
     role: string;
+    image?: string | null;
   };
 }
 

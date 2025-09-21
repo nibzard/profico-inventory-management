@@ -47,12 +47,12 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.user.id,
         action: 'OCR_PROCESSING',
-        details: {
+        details: JSON.stringify({
           filesProcessed: results.length,
           successful: results.filter(r => r.success).length,
           failed: results.filter(r => !r.success).length,
           totalProcessingTime: results.reduce((sum, r) => sum + r.processingTime, 0),
-        },
+        }),
       },
     });
 

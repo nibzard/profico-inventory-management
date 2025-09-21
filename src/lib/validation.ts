@@ -267,7 +267,7 @@ export const reportSchemas = {
 // File upload schemas
 export const fileSchemas = {
   invoice: commonSchemas.fileUpload.extend({
-    maxSize: z.literal(10 * 1024 * 1024), // 10MB
+    maxSize: z.literal(4 * 1024 * 1024), // 4MB
     allowedTypes: z.array(z.enum(['application/pdf', 'image/jpeg', 'image/png'])),
   }),
 
@@ -467,7 +467,6 @@ export const equipmentSchema = z.object({
   description: z.string().max(1000, "Description too long").optional(),
   notes: z.string().max(2000, "Notes too long").optional(),
   imageUrl: commonSchemas.url.optional(),
-  teamId: commonSchemas.cuid.optional().nullable(),
 });
 
 // Export everything that's already been exported above

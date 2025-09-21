@@ -102,7 +102,7 @@ export default async function DashboardPage() {
       db.user.count({ where: { isActive: true } }),
       db.equipment.findMany({
         where: { updatedAt: { gte: weekAgo } },
-        include: { assignedTo: { select: { name: true } } },
+        include: { currentOwner: { select: { name: true } } },
         orderBy: { updatedAt: "desc" },
         take: 10
       }),
@@ -175,11 +175,11 @@ export default async function DashboardPage() {
       db.equipment.findMany({
         where: {
           OR: [
-            { assignedTo: { teamId: user.teamId } },
+            { currentOwner: { teamId: user.teamId } },
             { status: { in: ['available', 'pending'] } }
           ]
         },
-        include: { assignedTo: { select: { name: true, email: true } } }
+        include: { currentOwner: { select: { name: true, email: true } } }
       }),
       db.equipmentRequest.count({
         where: { 
@@ -207,7 +207,7 @@ export default async function DashboardPage() {
 
     stats = {
       totalEquipment: teamEquipment.length,
-      assignedToMe: teamEquipment.filter(eq => eq.assignedToId === user.id).length,
+      assignedToMe: teamEquipment.filter(eq => eq.currentOwnerId === user.id).length,
       pendingRequests: pendingApprovals,
       myRequests,
       approvalsNeeded: pendingApprovals,
@@ -237,16 +237,16 @@ export default async function DashboardPage() {
       pendingRequests
     ] = await Promise.all([
       db.equipment.findMany({
-        where: { assignedToId: user.id },
+        where: { currentOwnerId: user.id },
         include: { 
-          assignedTo: { select: { name: true, email: true } },
+          currentOwner: { select: { name: true, email: true } },
           maintenanceRecords: {
             where: { completed: false },
             orderBy: { dueDate: "asc" },
             take: 1
           }
         },
-        orderBy: { assignedAt: "desc" }
+        orderBy: { updatedAt: "desc" }
       }),
       db.equipmentRequest.findMany({
         where: { requesterId: user.id },
@@ -560,7 +560,7 @@ export default async function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {teamEquipment.length === 0 ? (
+              {displayEquipment.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>No equipment assigned</p>

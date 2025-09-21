@@ -1,7 +1,7 @@
 // ABOUTME: Unit tests for EquipmentRequestForm component - equipment request form with validation
 // ABOUTME: Tests form validation, submission, error handling, and user interactions
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { EquipmentRequestForm } from "@/components/requests/equipment-request-form";
 import { toast } from "sonner";
 
@@ -128,7 +128,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Too short" },
@@ -151,7 +155,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "This is a valid justification that meets the minimum 20 character requirement." },
@@ -208,7 +216,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.equipmentType },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: validFormData.justification },
@@ -250,7 +262,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "  MacBook Pro  " },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "  Justification with spaces  " },
@@ -286,7 +302,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.equipmentType },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: validFormData.justification },
@@ -327,7 +347,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -350,7 +374,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -376,7 +404,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -404,7 +436,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -433,7 +469,11 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
+      clickPrioritySelect();
+      // Find and click the "Medium - Important" option in the select dropdown
+      const selectContent = document.querySelector('[data-open="true"]');
+      const mediumOption = within(selectContent || document.body).getByText("Medium - Important");
+      fireEvent.click(mediumOption);
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },

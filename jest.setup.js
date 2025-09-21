@@ -50,6 +50,8 @@ jest.mock('next/navigation', () => ({
 // Export router mocks globally for test access
 global.mockRouterInstance = mockRouter;
 
+// Add type definitions for global test utilities (TypeScript declarations should be in a .d.ts file)
+
 // Mock NextAuth.js
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(() => ({
@@ -118,7 +120,7 @@ jest.mock('@/components/ui/checkbox', () => ({
   Checkbox: ({ checked, onChange, ...props }) => (
     <input 
       type="checkbox" 
-      checked={checked} 
+      checked={checked || false} 
       onChange={onChange}
       {...props} 
     />
@@ -255,24 +257,36 @@ jest.mock('@/components/ui/select', () => {
   };
   
   const SelectTrigger = ({ children, ...props }) => {
-    const { isOpen, setIsOpen } = React.useContext(SelectContext);
+    const { isOpen, setIsOpen, selectedValue } = React.useContext(SelectContext);
     
     const handleClick = () => {
       setIsOpen(!isOpen);
     };
     
     return (
-      <button {...props} data-testid="select-trigger" onClick={handleClick}>
-        {children}
+      <button {...props} data-testid="select-trigger" onClick={handleClick} type="button">
+        {children || selectedValue}
       </button>
     );
   };
   
   const SelectValue = ({ children, placeholder, ...props }) => {
     const { selectedValue } = React.useContext(SelectContext);
+    
+    // Find the priority label based on the selected value
+    const getPriorityLabel = (value) => {
+      switch(value) {
+        case 'low': return 'Low - Nice to have';
+        case 'medium': return 'Medium - Important';
+        case 'high': return 'High - Critical';
+        case 'urgent': return 'Urgent - Blocking work';
+        default: return placeholder || '';
+      }
+    };
+    
     return (
       <span {...props}>
-        {children || placeholder || selectedValue}
+        {children || placeholder || getPriorityLabel(selectedValue)}
       </span>
     );
   };
@@ -283,7 +297,7 @@ jest.mock('@/components/ui/select', () => {
     if (!isOpen) return null;
     
     return (
-      <div {...props} data-open={isOpen}>
+      <div {...props} data-open={isOpen} style={{ position: 'absolute', zIndex: 1000, backgroundColor: 'white', border: '1px solid #ccc', borderRadius: '4px' }}>
         {children}
       </div>
     );
@@ -297,13 +311,32 @@ jest.mock('@/components/ui/select', () => {
       setIsOpen(false);
     };
     
+    // Map values to display names for accessibility
+    const getPriorityLabel = (value) => {
+      switch(value) {
+        case 'low': return 'Low - Nice to have';
+        case 'medium': return 'Medium - Important';
+        case 'high': return 'High - Critical';
+        case 'urgent': return 'Urgent - Blocking work';
+        default: return value;
+      }
+    };
+    
     return (
       <div 
         {...props}
         role="option"
         onClick={handleClick}
         data-value={itemValue}
-        style={{ cursor: 'pointer' }}
+        aria-label={getPriorityLabel(itemValue)}
+        style={{ cursor: 'pointer', padding: '8px' }}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
       >
         {children}
       </div>

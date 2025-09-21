@@ -17,6 +17,9 @@ const customJestConfig = {
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
   ],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(@testing-library|next|react|react-dom|@react-email|@uploadthing|@zxing|@babel|@hookform|@radix-ui|@prisma|@google|@auth|@next-auth|@react-email|@tailwindcss|@types)/)',
+  ],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
@@ -31,24 +34,9 @@ const customJestConfig = {
       statements: 70,
     },
   },
-  // TypeScript and transform configuration
+  // Use Next.js built-in transform for JavaScript/TypeScript with proper TypeScript support
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
-  },
-  extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        jsx: 'preserve',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        strict: true,
-        noEmit: true,
-        moduleResolution: 'node',
-        resolveJsonModule: true,
-        isolatedModules: true,
-      },
-    },
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: [
@@ -56,6 +44,13 @@ const customJestConfig = {
     '**/*.(test|spec).(ts|tsx|js|jsx)',
   ],
   verbose: true,
+  // Configure TypeScript globals
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json',
+      isolatedModules: true,
+    },
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

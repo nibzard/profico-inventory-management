@@ -37,6 +37,7 @@ import {
   Euro,
   Calendar,
   TrendingUp,
+  TrendingDown,
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
@@ -62,6 +63,47 @@ interface ReportData {
     purchaseDate: string;
     purchasePrice: number;
   }>;
+  depreciation?: {
+    summary: {
+      totalEquipment: number;
+      totalOriginalValue: number;
+      totalCurrentValue: number;
+      totalDepreciatedValue: number;
+      averageDepreciationRate: number;
+      netBookValue: number;
+    };
+    byAge: Array<{
+      ageRange: string;
+      depreciationRate: number;
+      equipmentCount: number;
+      originalValue: number;
+      currentValue: number;
+      depreciatedValue: number;
+    }>;
+    byCategory: Array<{
+      category: string;
+      totalEquipment: number;
+      totalOriginalValue: number;
+      depreciatedValue: number;
+      currentValue: number;
+      depreciationRate: number;
+    }>;
+    equipmentNearingFullDepreciation: Array<{
+      id: string;
+      name: string;
+      serialNumber: string;
+      purchaseDate: string;
+      purchasePrice: number;
+      currentValue: number;
+      category: string;
+      status: string;
+      currentOwner?: {
+        id: string;
+        name: string;
+        email: string;
+      };
+    }>;
+  };
 }
 
 export default function ReportsPage() {
@@ -76,9 +118,18 @@ export default function ReportsPage() {
 
   const fetchReportData = async () => {
     try {
-      const response = await fetch('/api/reports');
-      const data = await response.json();
-      setReportData(data);
+      const [reportResponse, depreciationResponse] = await Promise.all([
+        fetch('/api/reports'),
+        fetch('/api/reports/depreciation')
+      ]);
+      
+      const reportData = await reportResponse.json();
+      const depreciationData = await depreciationResponse.json();
+      
+      setReportData({
+        ...reportData,
+        depreciation: depreciationData
+      });
     } catch (error) {
       console.error('Error fetching report data:', error);
     } finally {
@@ -89,7 +140,7 @@ export default function ReportsPage() {
   const exportToExcel = async () => {
     if (!reportData) return;
 
-    const worksheet = XLSX.utils.json_to_sheet([
+    const summaryData = [
       { Metric: 'Total Equipment', Value: reportData.totalEquipment },
       { Metric: 'Available Equipment', Value: reportData.availableEquipment },
       { Metric: 'Assigned Equipment', Value: reportData.assignedEquipment },
@@ -97,7 +148,18 @@ export default function ReportsPage() {
       { Metric: 'Broken Equipment', Value: reportData.brokenEquipment },
       { Metric: 'Decommissioned Equipment', Value: reportData.decommissionedEquipment },
       { Metric: 'Total Value (€)', Value: reportData.totalValue },
-    ]);
+    ];
+
+    // Add depreciation summary if available
+    if (reportData.depreciation) {
+      summaryData.push(
+        { Metric: 'Total Depreciated Value (€)', Value: reportData.depreciation.summary.totalDepreciatedValue },
+        { Metric: 'Net Book Value (€)', Value: reportData.depreciation.summary.netBookValue },
+        { Metric: 'Average Depreciation Rate (%)', Value: (reportData.depreciation.summary.averageDepreciationRate * 100).toFixed(1) }
+      );
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(summaryData);
 
     const categoryData = Object.entries(reportData.equipmentByCategory).map(([category, count]) => ({
       Category: category.replace('_', ' ').toUpperCase(),
@@ -120,6 +182,47 @@ export default function ReportsPage() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Summary');
     XLSX.utils.book_append_sheet(workbook, categoryWorksheet, 'By Category');
     XLSX.utils.book_append_sheet(workbook, equipmentWorksheet, 'Recent Equipment');
+
+    // Add depreciation worksheets if available
+    if (reportData.depreciation) {
+      const depreciationByAge = reportData.depreciation.byAge.map(age => ({
+        'Age Range': age.ageRange,
+        'Equipment Count': age.equipmentCount,
+        'Original Value (€)': age.originalValue,
+        'Current Value (€)': age.currentValue,
+        'Depreciated Value (€)': age.depreciatedValue,
+        'Depreciation Rate (%)': (age.depreciationRate * 100).toFixed(1),
+      }));
+
+      const depreciationByCategory = reportData.depreciation.byCategory.map(cat => ({
+        Category: cat.category.replace('_', ' ').toUpperCase(),
+        'Equipment Count': cat.totalEquipment,
+        'Original Value (€)': cat.totalOriginalValue,
+        'Current Value (€)': cat.currentValue,
+        'Depreciated Value (€)': cat.depreciatedValue,
+        'Depreciation Rate (%)': (cat.depreciationRate * 100).toFixed(1),
+      }));
+
+      const depreciationAgeWorksheet = XLSX.utils.json_to_sheet(depreciationByAge);
+      const depreciationCategoryWorksheet = XLSX.utils.json_to_sheet(depreciationByCategory);
+
+      XLSX.utils.book_append_sheet(workbook, depreciationAgeWorksheet, 'Depreciation by Age');
+      XLSX.utils.book_append_sheet(workbook, depreciationCategoryWorksheet, 'Depreciation by Category');
+
+      if (reportData.depreciation.equipmentNearingFullDepreciation.length > 0) {
+        const nearingDepreciationData = reportData.depreciation.equipmentNearingFullDepreciation.map(item => ({
+          Name: item.name,
+          Category: item.category.replace('_', ' ').toUpperCase(),
+          'Purchase Date': new Date(item.purchaseDate).toLocaleDateString(),
+          'Original Value (€)': item.purchasePrice,
+          'Current Value (€)': item.currentValue,
+          Owner: item.currentOwner ? item.currentOwner.name : 'Unassigned',
+        }));
+
+        const nearingDepreciationWorksheet = XLSX.utils.json_to_sheet(nearingDepreciationData);
+        XLSX.utils.book_append_sheet(workbook, nearingDepreciationWorksheet, 'Nearing Full Depreciation');
+      }
+    }
 
     XLSX.writeFile(workbook, 'inventory-report.xlsx');
   };
@@ -217,7 +320,7 @@ export default function ReportsPage() {
       {/* Report Content */}
       <div id="report-content" className="space-y-6">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Equipment</CardTitle>
@@ -269,6 +372,40 @@ export default function ReportsPage() {
               </p>
             </CardContent>
           </Card>
+
+          {reportData.depreciation && (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Depreciated Value</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">
+                    €{reportData.depreciation.summary.totalDepreciatedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(reportData.depreciation.summary.averageDepreciationRate * 100).toFixed(1)}% average rate
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Net Book Value</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    €{reportData.depreciation.summary.netBookValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Current value of all assets
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Equipment by Status */}
@@ -344,6 +481,165 @@ export default function ReportsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Depreciation by Age */}
+        {reportData.depreciation && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Depreciation by Equipment Age</CardTitle>
+              <CardDescription>
+                Equipment depreciation analysis based on age categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {reportData.depreciation.byAge.map((ageGroup) => (
+                  <div key={ageGroup.ageRange} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="text-sm font-medium min-w-[120px]">
+                        {ageGroup.ageRange}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {ageGroup.equipmentCount} items
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">
+                          €{ageGroup.currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Current Value
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-orange-600">
+                          €{ageGroup.depreciatedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Depreciated ({(ageGroup.depreciationRate * 100).toFixed(0)}%)
+                        </div>
+                      </div>
+                      <div className="w-20">
+                        <Progress value={ageGroup.depreciationRate * 100} className="h-2" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Depreciation by Category */}
+        {reportData.depreciation && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Depreciation by Category</CardTitle>
+              <CardDescription>
+                Depreciation breakdown across equipment categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {reportData.depreciation.byCategory
+                  .sort((a, b) => b.depreciatedValue - a.depreciatedValue)
+                  .map((category) => (
+                    <div key={category.category} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <Badge variant="outline">
+                          {category.category.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        <div className="text-sm text-muted-foreground">
+                          {category.totalEquipment} items
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="text-sm font-medium">
+                            €{category.currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Current Value
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-orange-600">
+                            €{category.depreciatedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Depreciated ({(category.depreciationRate * 100).toFixed(1)}%)
+                          </div>
+                        </div>
+                        <div className="w-20">
+                          <Progress value={category.depreciationRate * 100} className="h-2" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Equipment Nearing Full Depreciation */}
+        {reportData.depreciation && reportData.depreciation.equipmentNearingFullDepreciation.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Equipment Nearing Full Depreciation</CardTitle>
+              <CardDescription>
+                Equipment older than 4.5 years (90%+ depreciated)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Purchase Date</TableHead>
+                      <TableHead>Original Value</TableHead>
+                      <TableHead>Current Value</TableHead>
+                      <TableHead>Owner</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.depreciation.equipmentNearingFullDepreciation.slice(0, 10).map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {item.category.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(item.purchaseDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          €{item.purchasePrice.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-orange-600">
+                          €{item.currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </TableCell>
+                        <TableCell>
+                          {item.currentOwner ? (
+                            <div>
+                              <div className="text-sm font-medium">{item.currentOwner.name}</div>
+                              <div className="text-xs text-muted-foreground">{item.currentOwner.email}</div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Unassigned</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Recent Equipment */}
         <Card>

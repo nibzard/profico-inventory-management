@@ -129,22 +129,137 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, { totalValue: number; count: number; averageValue: number }>);
 
-    // Get depreciation analysis (equipment older than 2 years)
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    // Get enhanced depreciation analysis
+    const currentDate = new Date();
+    const oneYearAgo = new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), currentDate.getDate());
+    const twoYearsAgo = new Date(currentDate.getFullYear() - 2, currentDate.getMonth(), currentDate.getDate());
+    const threeYearsAgo = new Date(currentDate.getFullYear() - 3, currentDate.getMonth(), currentDate.getDate());
     
-    const depreciationStats = await prisma.equipment.aggregate({
-      where: {
-        ...where,
-        purchaseDate: { lte: twoYearsAgo },
+    // Full depreciation analysis by age groups
+    const depreciationByAge = await Promise.all([
+      // Under 1 year (0% depreciation)
+      prisma.equipment.aggregate({
+        where: {
+          ...where,
+          purchaseDate: { gt: oneYearAgo },
+        },
+        _count: { id: true },
+        _sum: { purchasePrice: true },
+      }),
+      // 1-2 years (50% depreciation)
+      prisma.equipment.aggregate({
+        where: {
+          ...where,
+          purchaseDate: { lte: oneYearAgo, gt: twoYearsAgo },
+        },
+        _count: { id: true },
+        _sum: { purchasePrice: true },
+      }),
+      // 2-3 years (75% depreciation)
+      prisma.equipment.aggregate({
+        where: {
+          ...where,
+          purchaseDate: { lte: twoYearsAgo, gt: threeYearsAgo },
+        },
+        _count: { id: true },
+        _sum: { purchasePrice: true },
+      }),
+      // Over 3 years (100% depreciation)
+      prisma.equipment.aggregate({
+        where: {
+          ...where,
+          purchaseDate: { lte: threeYearsAgo },
+        },
+        _count: { id: true },
+        _sum: { purchasePrice: true },
+      }),
+    ]);
+
+    // Calculate depreciation metrics
+    const depreciationAnalysis = {
+      byAge: [
+        {
+          ageRange: 'Under 1 year',
+          depreciationRate: 0,
+          count: depreciationByAge[0]._count.id || 0,
+          originalValue: depreciationByAge[0]._sum.purchasePrice || 0,
+          currentValue: depreciationByAge[0]._sum.purchasePrice || 0,
+        },
+        {
+          ageRange: '1-2 years',
+          depreciationRate: 0.5,
+          count: depreciationByAge[1]._count.id || 0,
+          originalValue: depreciationByAge[1]._sum.purchasePrice || 0,
+          currentValue: (depreciationByAge[1]._sum.purchasePrice || 0) * 0.5,
+        },
+        {
+          ageRange: '2-3 years',
+          depreciationRate: 0.75,
+          count: depreciationByAge[2]._count.id || 0,
+          originalValue: depreciationByAge[2]._sum.purchasePrice || 0,
+          currentValue: (depreciationByAge[2]._sum.purchasePrice || 0) * 0.25,
+        },
+        {
+          ageRange: 'Over 3 years',
+          depreciationRate: 1.0,
+          count: depreciationByAge[3]._count.id || 0,
+          originalValue: depreciationByAge[3]._sum.purchasePrice || 0,
+          currentValue: 0,
+        },
+      ],
+      summary: {
+        totalEquipment: depreciationByAge.reduce((sum, age) => sum + (age._count.id || 0), 0),
+        totalOriginalValue: depreciationByAge.reduce((sum, age) => sum + (age._sum.purchasePrice || 0), 0),
+        totalCurrentValue: depreciationByAge.reduce((sum, age, index) => {
+          const rates = [1, 0.5, 0.25, 0];
+          return sum + ((age._sum.purchasePrice || 0) * rates[index]);
+        }, 0),
+        averageDepreciationRate: 0,
       },
-      _count: {
-        id: true,
-      },
-      _sum: {
-        purchasePrice: true,
-      },
+    };
+
+    // Calculate average depreciation rate
+    if (depreciationAnalysis.summary.totalOriginalValue > 0) {
+      depreciationAnalysis.summary.averageDepreciationRate = 
+        (depreciationAnalysis.summary.totalOriginalValue - depreciationAnalysis.summary.totalCurrentValue) / 
+        depreciationAnalysis.summary.totalOriginalValue;
+    }
+
+    // Get depreciation by category
+    const depreciationByCategory = await prisma.equipment.groupBy({
+      by: ['category'],
+      where,
+      _sum: { purchasePrice: true },
+      _count: { id: true },
     });
+
+    const categoryDepreciation = await Promise.all(
+      depreciationByCategory.map(async (category) => {
+        const categoryDepreciation = await prisma.equipment.aggregate({
+          where: {
+            ...where,
+            category: category.category,
+            purchaseDate: { lte: twoYearsAgo },
+          },
+          _count: { id: true },
+          _sum: { purchasePrice: true },
+        });
+
+        return {
+          category: category.category,
+          totalEquipment: category._count.id,
+          totalValue: category._sum.purchasePrice || 0,
+          depreciatedEquipment: categoryDepreciation._count.id || 0,
+          depreciatedValue: categoryDepreciation._sum.purchasePrice || 0,
+          depreciationPercentage: category._count.id > 0 
+            ? ((categoryDepreciation._count.id || 0) / category._count.id) * 100 
+            : 0,
+          valueDepreciationPercentage: (category._sum.purchasePrice || 0) > 0
+            ? ((categoryDepreciation._sum.purchasePrice || 0) / (category._sum.purchasePrice || 0)) * 100
+            : 0,
+        };
+      })
+    );
 
     // Get maintenance statistics
     const maintenanceStats = await prisma.maintenanceRecord.groupBy({
@@ -268,13 +383,8 @@ export async function GET(request: NextRequest) {
       valueByCategory: categoryValues,
       maintenanceByStatus: maintenanceCounts,
       requestsByStatus: requestCounts,
-      depreciationAnalysis: {
-        depreciatedEquipment: depreciationStats._count.id || 0,
-        depreciatedValue: depreciationStats._sum.purchasePrice || 0,
-        depreciationPercentage: totalStats._count.id > 0 
-          ? ((depreciationStats._count.id || 0) / totalStats._count.id) * 100 
-          : 0,
-      },
+      depreciationAnalysis: depreciationAnalysis,
+      depreciationByCategory: categoryDepreciation,
       teamStats: teamStats ? {
         id: teamStats.id,
         name: teamStats.name,
@@ -432,22 +542,101 @@ async function generateReportData(params: {
     },
   });
 
-  // Get depreciation analysis
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+  // Get enhanced depreciation analysis
+  const currentDate = new Date();
+  const oneYearAgo = new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), currentDate.getDate());
+  const twoYearsAgo = new Date(currentDate.getFullYear() - 2, currentDate.getMonth(), currentDate.getDate());
+  const threeYearsAgo = new Date(currentDate.getFullYear() - 3, currentDate.getMonth(), currentDate.getDate());
   
-  const depreciationStats = await prisma.equipment.aggregate({
-    where: {
-      ...where,
-      purchaseDate: { lte: twoYearsAgo },
+  // Full depreciation analysis by age groups
+  const depreciationByAge = await Promise.all([
+    // Under 1 year (0% depreciation)
+    prisma.equipment.aggregate({
+      where: {
+        ...where,
+        purchaseDate: { gt: oneYearAgo },
+      },
+      _count: { id: true },
+      _sum: { purchasePrice: true },
+    }),
+    // 1-2 years (50% depreciation)
+    prisma.equipment.aggregate({
+      where: {
+        ...where,
+        purchaseDate: { lte: oneYearAgo, gt: twoYearsAgo },
+      },
+      _count: { id: true },
+      _sum: { purchasePrice: true },
+    }),
+    // 2-3 years (75% depreciation)
+    prisma.equipment.aggregate({
+      where: {
+        ...where,
+        purchaseDate: { lte: twoYearsAgo, gt: threeYearsAgo },
+      },
+      _count: { id: true },
+      _sum: { purchasePrice: true },
+    }),
+    // Over 3 years (100% depreciation)
+    prisma.equipment.aggregate({
+      where: {
+        ...where,
+        purchaseDate: { lte: threeYearsAgo },
+      },
+      _count: { id: true },
+      _sum: { purchasePrice: true },
+    }),
+  ]);
+
+  // Calculate depreciation metrics
+  const depreciationAnalysis = {
+    byAge: [
+      {
+        ageRange: 'Under 1 year',
+        depreciationRate: 0,
+        count: depreciationByAge[0]._count.id || 0,
+        originalValue: depreciationByAge[0]._sum.purchasePrice || 0,
+        currentValue: depreciationByAge[0]._sum.purchasePrice || 0,
+      },
+      {
+        ageRange: '1-2 years',
+        depreciationRate: 0.5,
+        count: depreciationByAge[1]._count.id || 0,
+        originalValue: depreciationByAge[1]._sum.purchasePrice || 0,
+        currentValue: (depreciationByAge[1]._sum.purchasePrice || 0) * 0.5,
+      },
+      {
+        ageRange: '2-3 years',
+        depreciationRate: 0.75,
+        count: depreciationByAge[2]._count.id || 0,
+        originalValue: depreciationByAge[2]._sum.purchasePrice || 0,
+        currentValue: (depreciationByAge[2]._sum.purchasePrice || 0) * 0.25,
+      },
+      {
+        ageRange: 'Over 3 years',
+        depreciationRate: 1.0,
+        count: depreciationByAge[3]._count.id || 0,
+        originalValue: depreciationByAge[3]._sum.purchasePrice || 0,
+        currentValue: 0,
+      },
+    ],
+    summary: {
+      totalEquipment: depreciationByAge.reduce((sum, age) => sum + (age._count.id || 0), 0),
+      totalOriginalValue: depreciationByAge.reduce((sum, age) => sum + (age._sum.purchasePrice || 0), 0),
+      totalCurrentValue: depreciationByAge.reduce((sum, age, index) => {
+        const rates = [1, 0.5, 0.25, 0];
+        return sum + ((age._sum.purchasePrice || 0) * rates[index]);
+      }, 0),
+      averageDepreciationRate: 0,
     },
-    _count: {
-      id: true,
-    },
-    _sum: {
-      purchasePrice: true,
-    },
-  });
+  };
+
+  // Calculate average depreciation rate
+  if (depreciationAnalysis.summary.totalOriginalValue > 0) {
+    depreciationAnalysis.summary.averageDepreciationRate = 
+      (depreciationAnalysis.summary.totalOriginalValue - depreciationAnalysis.summary.totalCurrentValue) / 
+      depreciationAnalysis.summary.totalOriginalValue;
+  }
 
   return {
     totalEquipment: totalStats._count.id || 0,
@@ -458,13 +647,7 @@ async function generateReportData(params: {
     decommissionedEquipment: statusCounts['decommissioned'] || 0,
     totalValue: totalStats._sum.purchasePrice || 0,
     equipmentByStatus: statusCounts,
-    depreciationAnalysis: {
-      depreciatedEquipment: depreciationStats._count.id || 0,
-      depreciatedValue: depreciationStats._sum.purchasePrice || 0,
-      depreciationPercentage: totalStats._count.id > 0 
-        ? ((depreciationStats._count.id || 0) / totalStats._count.id) * 100 
-        : 0,
-    },
+    depreciationAnalysis: depreciationAnalysis,
     generatedAt: new Date().toISOString(),
     filters: params,
   };
@@ -476,14 +659,25 @@ function exportAsCSV(data: {
   totalEquipment: number;
   totalValue: number;
   depreciationAnalysis: {
-    depreciatedEquipment: number;
-    depreciatedValue: number;
+    byAge: Array<{
+      ageRange: string;
+      depreciationRate: number;
+      count: number;
+      originalValue: number;
+      currentValue: number;
+    }>;
+    summary: {
+      totalEquipment: number;
+      totalOriginalValue: number;
+      totalCurrentValue: number;
+      averageDepreciationRate: number;
+    };
   };
 }, reportType: string) {
   let csvContent = '';
   
   if (reportType === 'inventory') {
-    // Generate CSV headers
+    // Generate CSV headers for inventory report
     csvContent = 'Status,Count,Value\n';
     
     // Add status data
@@ -493,13 +687,41 @@ function exportAsCSV(data: {
     
     // Add summary
     csvContent += `\nTotal Equipment,${data.totalEquipment},${data.totalValue}\n`;
-    csvContent += `Depreciated Equipment,${data.depreciationAnalysis.depreciatedEquipment},${data.depreciationAnalysis.depreciatedValue}\n`;
+    
+    // Add enhanced depreciation analysis
+    csvContent += '\nDepreciation Analysis by Age\n';
+    csvContent += 'Age Range,Depreciation Rate,Equipment Count,Original Value,Current Value\n';
+    
+    data.depreciationAnalysis.byAge.forEach(ageGroup => {
+      csvContent += `${ageGroup.ageRange},${(ageGroup.depreciationRate * 100).toFixed(1)}%,${ageGroup.count},${ageGroup.originalValue.toFixed(2)},${ageGroup.currentValue.toFixed(2)}\n`;
+    });
+    
+    // Add depreciation summary
+    csvContent += '\nDepreciation Summary\n';
+    csvContent += 'Total Equipment,Total Original Value,Total Current Value,Average Depreciation Rate\n';
+    csvContent += `${data.depreciationAnalysis.summary.totalEquipment},${data.depreciationAnalysis.summary.totalOriginalValue.toFixed(2)},${data.depreciationAnalysis.summary.totalCurrentValue.toFixed(2)},${(data.depreciationAnalysis.summary.averageDepreciationRate * 100).toFixed(2)}%\n`;
+  } else if (reportType === 'value') {
+    // Value report with detailed depreciation
+    csvContent = 'Age Range,Depreciation Rate,Equipment Count,Original Value,Current Value,Value Loss\n';
+    
+    data.depreciationAnalysis.byAge.forEach(ageGroup => {
+      const valueLoss = ageGroup.originalValue - ageGroup.currentValue;
+      csvContent += `${ageGroup.ageRange},${(ageGroup.depreciationRate * 100).toFixed(1)}%,${ageGroup.count},${ageGroup.originalValue.toFixed(2)},${ageGroup.currentValue.toFixed(2)},${valueLoss.toFixed(2)}\n`;
+    });
+    
+    // Add summary
+    csvContent += `\nSummary\n`;
+    csvContent += `Total Equipment,${data.depreciationAnalysis.summary.totalEquipment}\n`;
+    csvContent += `Total Original Value,${data.depreciationAnalysis.summary.totalOriginalValue.toFixed(2)}\n`;
+    csvContent += `Total Current Value,${data.depreciationAnalysis.summary.totalCurrentValue.toFixed(2)}\n`;
+    csvContent += `Total Value Loss,${(data.depreciationAnalysis.summary.totalOriginalValue - data.depreciationAnalysis.summary.totalCurrentValue).toFixed(2)}\n`;
+    csvContent += `Average Depreciation Rate,${(data.depreciationAnalysis.summary.averageDepreciationRate * 100).toFixed(2)}%\n`;
   }
   
   return new NextResponse(csvContent, {
     headers: {
       'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="inventory-report-${new Date().toISOString().split('T')[0]}.csv"`,
+      'Content-Disposition': `attachment; filename="${reportType}-report-${new Date().toISOString().split('T')[0]}.csv"`,
     },
   });
 }

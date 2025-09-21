@@ -36,6 +36,7 @@ model User {
   transferRequestsTo     EquipmentTransferRequest[] @relation("EquipmentTransferRequestTo")
   transferRequestsInitiated EquipmentTransferRequest[] @relation("EquipmentTransferRequestBy")
   transferRequestsApproved EquipmentTransferRequest[] @relation("EquipmentTransferRequestApproved")
+  requestHistory          RequestHistory[] @relation("RequestHistoryUser")
 
   // NextAuth.js relations
   accounts      Account[]
@@ -147,11 +148,30 @@ model EquipmentRequest {
   updatedAt             DateTime  @updatedAt
 
   // Relations
-  requester User       @relation("RequesterRequests", fields: [requesterId], references: [id])
-  approver  User?      @relation("ApproverRequests", fields: [approverId], references: [id])
-  equipment Equipment? @relation(fields: [equipmentId], references: [id])
+  requester     User            @relation("RequesterRequests", fields: [requesterId], references: [id])
+  approver      User?           @relation("ApproverRequests", fields: [approverId], references: [id])
+  equipment     Equipment?      @relation(fields: [equipmentId], references: [id])
+  history       RequestHistory[]
 
   @@map("equipment_requests")
+}
+
+model RequestHistory {
+  id          String   @id @default(cuid())
+  requestId   String
+  userId      String   // User who performed the action
+  action      String   // "created", "team_lead_approved", "team_lead_rejected", "admin_approved", "admin_rejected", "status_changed", "equipment_assigned"
+  oldStatus   String?  // Previous status before the action
+  newStatus   String?  // New status after the action
+  notes       String?  // Notes or justification for the action
+  metadata    String?  // JSON field for additional data (rejection reason, approval notes, etc.)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  request EquipmentRequest @relation(fields: [requestId], references: [id])
+  user    User             @relation("RequestHistoryUser", fields: [userId], references: [id])
+
+  @@map("request_history")
 }
 
 model EquipmentHistory {

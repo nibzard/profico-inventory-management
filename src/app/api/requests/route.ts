@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requestSchemas, InputSanitizer, ValidationHelper } from "@/lib/validation";
 import { withSecurity } from "@/lib/security-middleware";
 import { EmailNotificationService, type EquipmentRequestEmailData } from "@/lib/email";
+import { RequestHistoryService } from "@/lib/request-history";
 
 interface AuthenticatedRequest extends NextRequest {
   user?: {
@@ -130,6 +131,18 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // Log request creation in audit trail
+      try {
+        await RequestHistoryService.logRequestCreation(
+          equipmentRequest.id,
+          user.id,
+          sanitizedData.equipmentType
+        );
+      } catch (historyError) {
+        console.error('Failed to log request creation history:', historyError);
+        // Don't fail the request creation if history logging fails
+      }
 
       // Send notification email to team leads
       try {

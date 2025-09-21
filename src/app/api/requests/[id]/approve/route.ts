@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { withSecurity } from "@/lib/security-middleware";
 import { EmailNotificationService, type EquipmentRequestEmailData } from "@/lib/email";
+import { RequestHistoryService } from "@/lib/request-history";
 
 interface AuthenticatedRequest extends NextRequest {
   user?: {
@@ -141,6 +142,26 @@ export async function POST(
           }
         }
       });
+
+      // Log approval action in audit trail
+      try {
+        if (user.role === 'team_lead') {
+          await RequestHistoryService.logTeamLeadApproval(
+            requestId,
+            user.id,
+            validatedData.notes
+          );
+        } else if (user.role === 'admin') {
+          await RequestHistoryService.logAdminApproval(
+            requestId,
+            user.id,
+            validatedData.notes
+          );
+        }
+      } catch (historyError) {
+        console.error('Failed to log approval history:', historyError);
+        // Don't fail the approval process if history logging fails
+      }
 
       // Prepare email data
       const emailData: EquipmentRequestEmailData = {

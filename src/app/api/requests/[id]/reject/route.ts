@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { withSecurity } from "@/lib/security-middleware";
 import { EmailNotificationService, type EquipmentRequestEmailData } from "@/lib/email";
+import { RequestHistoryService } from "@/lib/request-history";
 
 interface AuthenticatedRequest extends NextRequest {
   user?: {
@@ -120,6 +121,28 @@ export async function POST(
           }
         }
       });
+
+      // Log rejection action in audit trail
+      try {
+        if (user.role === 'team_lead') {
+          await RequestHistoryService.logTeamLeadRejection(
+            requestId,
+            user.id,
+            validatedData.reason,
+            validatedData.notes
+          );
+        } else if (user.role === 'admin') {
+          await RequestHistoryService.logAdminRejection(
+            requestId,
+            user.id,
+            validatedData.reason,
+            validatedData.notes
+          );
+        }
+      } catch (historyError) {
+        console.error('Failed to log rejection history:', historyError);
+        // Don't fail the rejection process if history logging fails
+      }
 
       // Prepare email data
       const emailData: EquipmentRequestEmailData = {

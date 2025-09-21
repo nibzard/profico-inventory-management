@@ -234,78 +234,88 @@ jest.mock('@/components/ui/form', () => ({
 // Mock select components with proper event handling and role attributes
 jest.mock('@/components/ui/select', () => {
   const React = require('react');
+  
+  const SelectContext = React.createContext({
+    selectedValue: '',
+    onValueChange: () => {},
+    isOpen: false,
+    setIsOpen: () => {},
+  });
+  
+  const Select = ({ children, value, onValueChange, ...props }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    
+    return (
+      <SelectContext.Provider value={{ selectedValue: value, onValueChange, isOpen, setIsOpen }}>
+        <div data-value={value} data-testid="select" data-open={isOpen} {...props}>
+          {children}
+        </div>
+      </SelectContext.Provider>
+    );
+  };
+  
+  const SelectTrigger = ({ children, ...props }) => {
+    const { isOpen, setIsOpen } = React.useContext(SelectContext);
+    
+    const handleClick = () => {
+      setIsOpen(!isOpen);
+    };
+    
+    return (
+      <button {...props} data-testid="select-trigger" onClick={handleClick}>
+        {children}
+      </button>
+    );
+  };
+  
+  const SelectValue = ({ children, placeholder, ...props }) => {
+    const { selectedValue } = React.useContext(SelectContext);
+    return (
+      <span {...props}>
+        {children || placeholder || selectedValue}
+      </span>
+    );
+  };
+  
+  const SelectContent = ({ children, ...props }) => {
+    const { isOpen } = React.useContext(SelectContext);
+    
+    if (!isOpen) return null;
+    
+    return (
+      <div {...props} data-open={isOpen}>
+        {children}
+      </div>
+    );
+  };
+  
+  const SelectItem = ({ children, value: itemValue, ...props }) => {
+    const { onValueChange, setIsOpen } = React.useContext(SelectContext);
+    
+    const handleClick = () => {
+      onValueChange(itemValue);
+      setIsOpen(false);
+    };
+    
+    return (
+      <div 
+        {...props}
+        role="option"
+        onClick={handleClick}
+        data-value={itemValue}
+        style={{ cursor: 'pointer' }}
+      >
+        {children}
+      </div>
+    );
+  };
+  
   return {
-    Select: ({ children, value, onValueChange, ...props }) => {
-      const [isOpen, setIsOpen] = React.useState(false);
-      
-      return (
-        <div data-value={value} data-testid="select" data-open={isOpen}>
-          {React.Children.map(children, child => {
-            if (React.isValidElement(child)) {
-              // Pass selectedValue and onValueChange to all children
-              return React.cloneElement(child, { 
-                selectedValue: value, 
-                onValueChange,
-                isOpen,
-                setIsOpen
-              });
-            }
-            return child;
-          })}
-        </div>
-      );
-    },
-    SelectTrigger: ({ children, ...allProps }) => {
-      const { selectedValue, onValueChange, isOpen, setIsOpen, ...domProps } = allProps;
-      
-      const handleClick = () => {
-        setIsOpen?.(!isOpen);
-      };
-      
-      // Generate a unique ID for accessibility if not provided
-      const id = domProps.id || React.useId?.() || `select-trigger-${Math.random().toString(36).substr(2, 9)}`;
-      
-      return (
-        <button {...domProps} id={id} data-testid="select-trigger" onClick={handleClick}>
-          {children}
-        </button>
-      );
-    },
-    SelectValue: ({ children, placeholder, ...allProps }) => {
-      const { selectedValue, onValueChange, ...domProps } = allProps;
-      return <span {...domProps}>{children || placeholder}</span>;
-    },
-    SelectContent: ({ children, ...allProps }) => {
-      const { selectedValue, onValueChange, isOpen, ...domProps } = allProps;
-      // Always render but hide with CSS for easier testing
-      return (
-        <div {...domProps} style={{ display: isOpen ? 'block' : 'none' }} data-open={isOpen}>
-          {React.Children.map(children, child => {
-            if (React.isValidElement(child)) {
-              // Pass onValueChange to SelectItem children, but preserve their own value prop
-              return React.cloneElement(child, { 
-                selectedValue, // Pass the current selected value
-                onValueChange 
-              });
-            }
-            return child;
-          })}
-        </div>
-      );
-    },
-    SelectItem: ({ children, value: itemValue, ...allProps }) => {
-      const { selectedValue, onValueChange, ...domProps } = allProps;
-      return (
-        <div 
-          {...domProps}
-          role="option"
-          onClick={() => onValueChange?.(itemValue)}
-          data-value={itemValue}
-        >
-          {children}
-        </div>
-      );
-    },
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
   };
 })
 

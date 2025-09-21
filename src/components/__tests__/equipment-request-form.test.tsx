@@ -15,16 +15,12 @@ global.fetch = mockFetch;
 const mockRouter = (global as any).mockRouterInstance;
 const mockToast = toast as jest.Mocked<typeof toast>;
 
-// Helper function to click the category select
-const clickCategorySelect = () => {
-  // Find the category select by clicking on the trigger button
-  const selectButtons = screen.getAllByRole('button');
-  const categoryButton = selectButtons.find(button => 
-    button.textContent?.includes('Select equipment category') || 
-    button.textContent?.includes('Computers & Laptops')
-  );
-  if (categoryButton) {
-    fireEvent.click(categoryButton);
+// Helper function to click the priority select
+const clickPrioritySelect = () => {
+  const prioritySelect = screen.getByTestId("select");
+  const selectTrigger = prioritySelect.querySelector('[data-testid="select-trigger"]');
+  if (selectTrigger) {
+    fireEvent.click(selectTrigger);
   }
 };
 
@@ -43,30 +39,30 @@ describe("EquipmentRequestForm", () => {
       render(<EquipmentRequestForm />);
 
       expect(screen.getByLabelText("Equipment Type *")).toBeInTheDocument();
-      expect(screen.getByText("Category *")).toBeInTheDocument();
       expect(screen.getByText("Priority Level")).toBeInTheDocument();
       expect(screen.getByLabelText("Business Justification *")).toBeInTheDocument();
-      expect(screen.getByLabelText("Specific Requirements (Optional)")).toBeInTheDocument();
+      expect(screen.getByLabelText("Budget (€) (Optional)")).toBeInTheDocument();
+      expect(screen.getByLabelText("Needed By (Optional)")).toBeInTheDocument();
 
       expect(screen.getByText("Submit Request")).toBeInTheDocument();
       expect(screen.getByText("Cancel")).toBeInTheDocument();
     });
 
-    it("should render equipment categories in select dropdown", () => {
+    it("should render priority levels in select dropdown", () => {
       render(<EquipmentRequestForm />);
 
-      // Click on the category select trigger (find the one with the placeholder)
-      const categorySelect = screen.getAllByTestId("select")[0]; // First select is for category
-      const selectTrigger = categorySelect.querySelector('[data-testid="select-trigger"]');
+      // Click on the priority select trigger
+      const prioritySelect = screen.getByTestId("select");
+      const selectTrigger = prioritySelect.querySelector('[data-testid="select-trigger"]');
       if (selectTrigger) {
         fireEvent.click(selectTrigger);
       }
 
-      // Check for options in the dropdown (using role="option")
-      expect(screen.getByRole("option", { name: "Computers & Laptops" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Mobile Devices & Tablets" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Peripherals (Mouse, Keyboard, etc.)" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Other" })).toBeInTheDocument();
+      // Check for priority options in the dropdown (using role="option")
+      expect(screen.getByRole("option", { name: /Low - Nice to have/ })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /Medium - Important/ })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /High - Critical/ })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /Urgent - Blocking work/ })).toBeInTheDocument();
     });
 
     it("should render priority levels with descriptions", () => {
@@ -110,7 +106,7 @@ describe("EquipmentRequestForm", () => {
       });
     });
 
-    it("should show error for unselected category", async () => {
+    it("should show error for missing justification", async () => {
       const { container } = render(<EquipmentRequestForm />);
 
       fireEvent.change(screen.getByLabelText("Equipment Type *"), {
@@ -121,7 +117,7 @@ describe("EquipmentRequestForm", () => {
       fireEvent.submit(form!);
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith("Please select a category");
+        expect(mockToast.error).toHaveBeenCalledWith("Please provide a detailed justification (at least 20 characters)");
       });
     });
 
@@ -132,7 +128,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Too short" },
@@ -155,7 +151,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "This is a valid justification that meets the minimum 20 character requirement." },
@@ -192,7 +188,6 @@ describe("EquipmentRequestForm", () => {
   describe("form submission", () => {
     const validFormData = {
       equipmentType: "MacBook Pro 14-inch",
-      category: "computers",
       justification: "I need this laptop for my daily development work as it will improve my productivity significantly.",
       priority: "high",
       specificRequirements: "16GB RAM, 512GB SSD, M2 Pro chip",
@@ -213,7 +208,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.equipmentType },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: validFormData.justification },
@@ -237,7 +232,6 @@ describe("EquipmentRequestForm", () => {
           },
           body: JSON.stringify({
             equipmentType: validFormData.equipmentType,
-            category: validFormData.category,
             justification: validFormData.justification,
             priority: validFormData.priority,
             specificRequirements: validFormData.specificRequirements,
@@ -256,7 +250,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "  MacBook Pro  " },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "  Justification with spaces  " },
@@ -277,7 +271,6 @@ describe("EquipmentRequestForm", () => {
           },
           body: JSON.stringify({
             equipmentType: "MacBook Pro", // Trimmed
-            category: "computers",
             justification: "Justification with spaces", // Trimmed
             priority: "medium",
             specificRequirements: "Requirements with spaces", // Trimmed
@@ -293,7 +286,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: validFormData.equipmentType },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: validFormData.justification },
@@ -311,7 +304,6 @@ describe("EquipmentRequestForm", () => {
           },
           body: JSON.stringify({
             equipmentType: validFormData.equipmentType,
-            category: "computers",
             justification: validFormData.justification,
             priority: "medium",
             specificRequirements: undefined, // Should be undefined when empty
@@ -335,7 +327,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -358,7 +350,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -384,7 +376,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -412,7 +404,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -441,7 +433,7 @@ describe("EquipmentRequestForm", () => {
         target: { value: "MacBook Pro" },
       });
 
-      fireEvent.click(screen.getByRole("option", { name: "Computers & Laptops" }));
+      fireEvent.click(screen.getByRole("option", { name: /Medium - Important/ }));
 
       fireEvent.change(screen.getByLabelText("Business Justification *"), {
         target: { value: "Valid justification that meets the minimum length requirement." },
@@ -509,11 +501,11 @@ describe("EquipmentRequestForm", () => {
       render(<EquipmentRequestForm />);
 
       const equipmentTypeLabel = screen.getByText("Equipment Type *");
-      const categoryLabel = screen.getByText("Category *");
+      const priorityLabel = screen.getByText("Priority Level");
       const justificationLabel = screen.getByText("Business Justification *");
 
       expect(equipmentTypeLabel).toBeInTheDocument();
-      expect(categoryLabel).toBeInTheDocument();
+      expect(priorityLabel).toBeInTheDocument();
       expect(justificationLabel).toBeInTheDocument();
 
       expect(equipmentTypeLabel).toHaveAttribute("for", "equipmentType");

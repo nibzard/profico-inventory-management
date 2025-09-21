@@ -31,6 +31,31 @@ const customJestConfig = {
       statements: 70,
     },
   },
+  // TypeScript and transform configuration
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+  },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'preserve',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        strict: true,
+        noEmit: true,
+        moduleResolution: 'node',
+        resolveJsonModule: true,
+        isolatedModules: true,
+      },
+    },
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  testMatch: [
+    '**/__tests__/**/*.(ts|tsx|js|jsx)',
+    '**/*.(test|spec).(ts|tsx|js|jsx)',
+  ],
+  verbose: true,
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

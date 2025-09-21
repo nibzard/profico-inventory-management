@@ -1,5 +1,5 @@
-// ABOUTME: API endpoint for rejecting equipment requests with email notifications
-// ABOUTME: Handles POST requests for team lead and admin rejection with reason tracking
+// ABOUTME: API endpoint for rejecting equipment requests with role-based approval workflow
+// ABOUTME: Handles POST requests for team lead and admin rejection with email notifications
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -16,7 +16,7 @@ interface AuthenticatedRequest extends NextRequest {
 }
 
 const rejectRequestSchema = z.object({
-  reason: z.string().min(10, "Rejection reason must be at least 10 characters").max(1000, "Rejection reason is too long"),
+  rejectionReason: z.string().min(10, "Rejection reason must be at least 10 characters"),
   notes: z.string().optional(),
 });
 
@@ -77,29 +77,39 @@ export async function POST(
       }
 
       let updateData: any = {
-        approverId: user.id,
         status: 'rejected',
-        rejectionReason: validatedData.reason,
+        approverId: user.id,
+        rejectionReason: validatedData.rejectionReason,
         updatedAt: new Date(),
       };
 
-      // Track which level rejected the request
+      // Determine rejection workflow based on user role
       if (user.role === 'team_lead') {
+        // Team lead rejection
         if (currentRequest.teamLeadApproval !== null) {
           return NextResponse.json(
             { error: "Request has already been reviewed by a team lead" },
             { status: 400 }
           );
         }
+
         updateData.teamLeadApproval = false;
       } else if (user.role === 'admin') {
+        // Admin rejection
         if (currentRequest.adminApproval !== null) {
           return NextResponse.json(
             { error: "Request has already been reviewed by an admin" },
             { status: 400 }
           );
         }
+
+        // Admins can reject at any point in the workflow
         updateData.adminApproval = false;
+        
+        // If team lead hasn't reviewed yet, also mark that as rejected
+        if (currentRequest.teamLeadApproval === null) {
+          updateData.teamLeadApproval = false;
+        }
       }
 
       // Add notes if provided
@@ -143,7 +153,7 @@ export async function POST(
           email: updatedRequest.approver.email,
           role: updatedRequest.approver.role as any,
         } : undefined,
-        rejectionReason: updatedRequest.rejectionReason || undefined,
+        rejectionReason: updatedRequest.rejectionReason,
         createdAt: updatedRequest.createdAt,
         updatedAt: updatedRequest.updatedAt,
       };
@@ -159,6 +169,8 @@ export async function POST(
       return NextResponse.json({
         message: "Request rejected successfully",
         request: updatedRequest,
+        rejectedBy: user.role,
+        rejectionReason: validatedData.rejectionReason,
       });
 
     } catch (error) {

@@ -1,9 +1,11 @@
 // ABOUTME: Equipment detail page showing comprehensive equipment information
 // ABOUTME: Displays equipment details, history, maintenance records, and actions
 
+"use client";
+
+import { useState, useEffect } from "react";
 import { auth } from "@/lib/auth";
-import { notFound } from "next/navigation";
-import { db } from "@/lib/prisma";
+import { notFound, useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,58 +28,64 @@ import {
 import Link from "next/link";
 import { EquipmentAssignDialog } from "@/components/equipment/equipment-assign-dialog";
 import { EquipmentUnassignDialog } from "@/components/equipment/equipment-unassign-dialog";
+import { EquipmentStatusDialog } from "@/components/equipment/equipment-status-dialog";
+import { EquipmentHistoryComponent } from "@/components/equipment/equipment-history";
+import { EquipmentCategoriesTags } from "@/components/equipment/equipment-categories-tags";
 
 interface EquipmentDetailPageProps {
   params: { id: string };
 }
 
-export default async function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
-  const session = await auth();
+export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
+  const router = useRouter();
+  const [session, setSession] = useState<any>(null);
+  const [equipment, setEquipment] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
-  if (!session) {
-    redirect("/auth/signin");
-  }
+  // Fetch session and equipment data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const sessionData = await auth();
+        setSession(sessionData);
 
-  const equipment = await db.equipment.findUnique({
-    where: { id: params.id },
-    include: {
-      currentOwner: {
-        select: { id: true, name: true, email: true, image: true },
-      },
-      team: {
-        select: { id: true, name: true },
-      },
-      maintenanceRecords: {
-        orderBy: { date: "desc" },
-        include: {
-          performedBy: {
-            select: { id: true, name: true },
-          },
-        },
-        take: 5,
-      },
-      history: {
-        orderBy: { timestamp: "desc" },
-        include: {
-          performedBy: {
-            select: { id: true, name: true },
-          },
-        },
-        take: 10,
-      },
-    },
-  });
+        if (!sessionData) {
+          window.location.href = "/auth/signin";
+          return;
+        }
 
-  if (!equipment) {
-    notFound();
+        const equipmentResponse = await fetch(`/api/equipment/${params.id}`);
+        if (equipmentResponse.ok) {
+          const equipmentData = await equipmentResponse.json();
+          setEquipment(equipmentData);
+        } else {
+          notFound();
+        }
+      } catch (error) {
+        console.error("Error fetching equipment:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [params.id]);
+
+  if (loading || !equipment) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   // Check if user has permission to view this equipment
-  if (session.user.role === "user" && equipment.currentOwnerId !== session.user.id && equipment.status !== "available") {
-    redirect("/dashboard");
+  if (session && session.user && session.user.role === "user" && equipment.currentOwnerId !== session.user.id && equipment.status !== "available") {
+    router.push("/dashboard");
   }
 
-  const canEdit = session.user.role === "admin" || session.user.role === "team_lead";
+  const canEdit = session && session.user && (session.user.role === "admin" || session.user.role === "team_lead");
   const canAssign = canEdit && equipment.status === "available";
   const canUnassign = canEdit && equipment.status === "assigned";
 
@@ -376,6 +384,17 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
                   </Link>
                 </Button>
                 
+                {canEdit && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setStatusDialogOpen(true)}
+                  >
+                    <Wrench className="h-4 w-4 mr-2" />
+                    Change Status
+                  </Button>
+                )}
+                
                 <Button variant="outline" className="w-full" asChild>
                   <Link href={`/equipment/${equipment.id}/qr`}>
                     <QrCode className="h-4 w-4 mr-2" />
@@ -387,7 +406,7 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
                   <Button variant="outline" className="w-full" asChild>
                     <Link href={`/equipment/${equipment.id}/maintenance`}>
                       <Wrench className="h-4 w-4 mr-2" />
-                      Maintenance
+                      Maintenance Records
                     </Link>
                   </Button>
                 )}
@@ -396,6 +415,43 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
           </div>
         </div>
       </div>
+
+      {/* Equipment History Section */}
+      <div className="mt-8">
+        <EquipmentHistoryComponent
+          equipmentId={equipment.id}
+          equipmentName={equipment.name}
+          canAddManualEntries={canEdit}
+        />
+      </div>
+
+      {/* Equipment Categories and Tags */}
+      <div className="mt-8">
+        <EquipmentCategoriesTags
+          equipmentId={equipment.id}
+          canManage={canEdit}
+        />
+      </div>
+
+      {/* Status Management Dialog */}
+      {equipment && (
+        <EquipmentStatusDialog
+          equipment={equipment}
+          open={statusDialogOpen}
+          onOpenChange={setStatusDialogOpen}
+          onSuccess={() => {
+            // Refresh equipment data after status change
+            const fetchEquipment = async () => {
+              const response = await fetch(`/api/equipment/${equipment.id}`);
+              if (response.ok) {
+                const data = await response.json();
+                setEquipment(data);
+              }
+            };
+            fetchEquipment();
+          }}
+        />
+      )}
     </div>
   );
 }

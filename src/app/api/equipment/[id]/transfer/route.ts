@@ -96,7 +96,11 @@ export async function POST(
 
     // If immediate transfer is allowed or no approval needed, transfer immediately
     if (validatedData.immediateTransfer || !needsApproval || currentUser.role === "admin") {
-      return await performImmediateTransfer(equipmentId, validatedData, session);
+      const updatedEquipment = await performImmediateTransfer(equipmentId, validatedData, session);
+      return NextResponse.json({
+        message: "Equipment transferred successfully",
+        equipment: updatedEquipment,
+      });
     }
 
     // Otherwise, create transfer request

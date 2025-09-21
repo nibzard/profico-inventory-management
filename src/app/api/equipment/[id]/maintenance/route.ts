@@ -15,16 +15,17 @@ const maintenanceSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const maintenanceRecords = await db.maintenanceRecord.findMany({
-      where: { equipmentId: params.id },
+      where: { equipmentId: id },
       include: {
         performedBy: {
           select: { id: true, name: true },
@@ -45,9 +46,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session || (session.user.role !== "admin" && session.user.role !== "team_lead")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -57,7 +59,7 @@ export async function POST(
     const validatedData = maintenanceSchema.parse(body);
 
     const equipment = await db.equipment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!equipment) {
@@ -67,7 +69,7 @@ export async function POST(
     // Create maintenance record
     const maintenanceRecord = await db.maintenanceRecord.create({
       data: {
-        equipmentId: params.id,
+        equipmentId: id,
         type: validatedData.type,
         date: new Date(validatedData.date),
         description: validatedData.description,
@@ -93,14 +95,14 @@ export async function POST(
     }
 
     const updatedEquipment = await db.equipment.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
     // Create history record
     await db.equipmentHistory.create({
       data: {
-        equipmentId: params.id,
+        equipmentId: id,
         action: "MAINTENANCE",
         performedBy: session.user.id,
         details: `${validatedData.type.toUpperCase()} maintenance performed`,

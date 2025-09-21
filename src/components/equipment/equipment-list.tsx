@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +59,7 @@ export function EquipmentList({
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] =
     useState<EquipmentWithOwner | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -75,7 +77,7 @@ export function EquipmentList({
     );
   };
 
-  const canEdit = (_equipment: EquipmentWithOwner) => {
+  const canEdit = () => {
     return userRole === "admin" || userRole === "team_lead";
   };
 
@@ -103,6 +105,24 @@ export function EquipmentList({
     setUnassignDialogOpen(true);
   };
 
+  const handleSelectItem = (equipmentId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(equipmentId)) {
+      newSelected.delete(equipmentId);
+    } else {
+      newSelected.add(equipmentId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.size === equipment.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(equipment.map(item => item.id)));
+    }
+  };
+
   if (equipment.length === 0) {
     return (
       <Card>
@@ -118,20 +138,48 @@ export function EquipmentList({
 
   return (
     <div className="space-y-6">
+      {/* Selection Controls */}
+      {equipment.length > 0 && (
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+          <div className="flex items-center space-x-3">
+            <Checkbox
+              id="select-all"
+              checked={selectedItems.size === equipment.length && equipment.length > 0}
+              onCheckedChange={handleSelectAll}
+            />
+            <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+              Select All
+            </label>
+            {selectedItems.size > 0 && (
+              <Badge variant="secondary">
+                {selectedItems.size} selected
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Equipment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {equipment.map((item) => (
-          <Card key={item.id} className="hover:shadow-lg transition-shadow">
+          <Card key={item.id} className={`hover:shadow-lg transition-shadow ${selectedItems.has(item.id) ? 'ring-2 ring-blue-500' : ''}`}>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <CardDescription>
-                    {item.brand} {item.model}
-                  </CardDescription>
-                  <p className="text-xs text-gray-500 mt-1 font-mono">
-                    {item.serialNumber}
-                  </p>
+                <div className="flex items-start space-x-2 flex-1">
+                  <Checkbox
+                    checked={selectedItems.has(item.id)}
+                    onCheckedChange={() => handleSelectItem(item.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{item.name}</CardTitle>
+                    <CardDescription>
+                      {item.brand} {item.model}
+                    </CardDescription>
+                    <p className="text-xs text-gray-500 mt-1 font-mono">
+                      {item.serialNumber}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {getStatusBadge(item.status)}
@@ -149,7 +197,7 @@ export function EquipmentList({
                         </Link>
                       </DropdownMenuItem>
 
-                      {canEdit(item) && (
+                      {canEdit() && (
                         <DropdownMenuItem asChild>
                           <Link href={`/equipment/${item.id}/edit`}>
                             <Edit className="h-4 w-4 mr-2" />
@@ -172,7 +220,7 @@ export function EquipmentList({
                         </DropdownMenuItem>
                       )}
 
-                      {canEdit(item) && (
+                      {canEdit() && (
                         <DropdownMenuItem asChild>
                           <Link href={`/equipment/${item.id}/maintenance`}>
                             <Wrench className="h-4 w-4 mr-2" />

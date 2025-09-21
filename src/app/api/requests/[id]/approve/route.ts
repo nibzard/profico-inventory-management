@@ -21,12 +21,13 @@ const approveRequestSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return withSecurity(request, async (req: AuthenticatedRequest) => {
     try {
+      const { id } = await params;
       const user = req.user;
-      const requestId = params.id;
+      const requestId = id;
       
       if (!user?.id || !user?.role) {
         return NextResponse.json(

@@ -5,16 +5,17 @@ import { equipmentSchema } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const equipment = await db.equipment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         currentOwner: {
           select: { id: true, name: true, email: true },
@@ -63,9 +64,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session || (session.user.role !== "admin" && session.user.role !== "team_lead")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -75,7 +77,7 @@ export async function PUT(
     const validatedData = equipmentSchema.parse(body);
 
     const existingEquipment = await db.equipment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingEquipment) {
@@ -83,7 +85,7 @@ export async function PUT(
     }
 
     const updatedEquipment = await db.equipment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         purchaseDate: new Date(validatedData.purchaseDate),
@@ -104,7 +106,7 @@ export async function PUT(
     // Create history record
     await db.equipmentHistory.create({
       data: {
-        equipmentId: params.id,
+        equipmentId: id,
         action: "UPDATED",
         performedBy: session.user.id,
         details: "Equipment details updated",
@@ -132,16 +134,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const existingEquipment = await db.equipment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingEquipment) {
@@ -150,7 +153,7 @@ export async function DELETE(
 
     // Soft delete by marking as decommissioned
     await db.equipment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "decommissioned",
         updatedBy: session.user.id,
@@ -160,7 +163,7 @@ export async function DELETE(
     // Create history record
     await db.equipmentHistory.create({
       data: {
-        equipmentId: params.id,
+        equipmentId: id,
         action: "DECOMMISSIONED",
         performedBy: session.user.id,
         details: "Equipment decommissioned",

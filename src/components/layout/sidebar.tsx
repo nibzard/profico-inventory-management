@@ -5,6 +5,7 @@ export function Sidebar() {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: "🏠" },
     { label: "Equipment", href: "/equipment", icon: "💻" },
+    { label: "Equipment Management", href: "/equipment/management", icon: "⚙️" },
     { label: "Requests", href: "/requests", icon: "📋" },
     { label: "Subscriptions", href: "/subscriptions", icon: "💿" },
     { label: "Reports", href: "/reports", icon: "📊" },

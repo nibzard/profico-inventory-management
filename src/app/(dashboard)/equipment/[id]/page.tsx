@@ -75,7 +75,7 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
     fetchData();
   }, [id, session, status]);
 
-  if (loading || !equipment) {
+  if (loading || !equipment || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -83,11 +83,8 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
     );
   }
 
-  // If no session after loading, redirect to auth
-  if (!session) {
-    router.push("/auth/signin");
-    return null;
-  }
+  // If no session after loading, show loading state
+  // Middleware will handle authentication redirects
 
   // Check if user has permission to view this equipment
   if (session.user.role === "user" && equipment.currentOwnerId !== session.user.id && equipment.status !== "available") {

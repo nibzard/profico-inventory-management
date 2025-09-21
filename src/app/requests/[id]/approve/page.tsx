@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -75,7 +75,7 @@ export default function ApprovalPage({ params }: ApprovalPageProps) {
   const [user, setUser] = useState<any>(null);
   const [notes, setNotes] = useState("");
 
-  useState(() => {
+  useEffect(() => {
     const loadRequest = async () => {
       try {
         const session = await auth();
@@ -120,7 +120,7 @@ export default function ApprovalPage({ params }: ApprovalPageProps) {
     };
 
     loadRequest();
-  });
+  }, [params, router]);
 
   const getPriorityBadge = (priority: string) => {
     const variants = {

@@ -408,12 +408,8 @@ export const subscriptionSchemas = {
     assignedUserId: commonSchemas.cuid,
     assignedUserEmail: commonSchemas.email,
     price: z.number().min(0, "Price must be non-negative"),
-    billingFrequency: z.enum(['monthly', 'yearly'], {
-      errorMap: () => ({ message: "Billing frequency must be 'monthly' or 'yearly'" })
-    }) as any,
-    paymentMethod: z.enum(['company_card', 'personal_card'], {
-      errorMap: () => ({ message: "Payment method must be 'company_card' or 'personal_card'" })
-    }) as any,
+    billingFrequency: z.enum(['monthly', 'yearly']),
+    paymentMethod: z.enum(['company_card', 'personal_card']),
     invoiceRecipient: commonSchemas.email,
     isReimbursement: z.boolean().default(false),
     isActive: z.boolean().default(true),

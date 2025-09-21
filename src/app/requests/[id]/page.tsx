@@ -30,6 +30,7 @@ import {
   Phone,
 } from "lucide-react";
 import Link from "next/link";
+import { RequestHistory } from "@/components/requests/request-history";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -392,6 +393,11 @@ export default async function RequestDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
         )}
+
+        {/* Request History */}
+        <RequestHistory 
+          requestId={id} 
+        />
 
         {/* Actions */}
         <Card>

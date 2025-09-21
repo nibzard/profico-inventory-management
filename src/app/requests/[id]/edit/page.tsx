@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,7 @@ export default function EditRequestPage({ params }: EditRequestPageProps) {
     neededBy: "",
   });
 
-  useState(() => {
+  useEffect(() => {
     const loadRequest = async () => {
       try {
         const session = await auth();
@@ -144,7 +144,7 @@ export default function EditRequestPage({ params }: EditRequestPageProps) {
     };
 
     loadRequest();
-  });
+  }, [params, router]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({

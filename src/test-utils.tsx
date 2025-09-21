@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { jest } from '@jest/globals'
 
 // Custom render function with providers
-export function renderWithProviders(ui, { route = '/' } = {}) {
+export function renderWithProviders(ui: React.ReactElement, { route = '/' }: { route?: string } = {}) {
   window.history.pushState({}, 'Test page', route)
   
   return {
@@ -17,7 +18,9 @@ export const localStorageMock = {
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
-}
+  length: 0,
+  key: jest.fn(),
+} as Storage
 global.localStorage = localStorageMock
 
 // Mock sessionStorage
@@ -26,11 +29,13 @@ export const sessionStorageMock = {
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
-}
+  length: 0,
+  key: jest.fn(),
+} as Storage
 global.sessionStorage = sessionStorageMock
 
 // Mock fetch API
-global.fetch = jest.fn()
+global.fetch = jest.fn() as any
 
 // Mock console methods to reduce noise in tests
 global.console = {

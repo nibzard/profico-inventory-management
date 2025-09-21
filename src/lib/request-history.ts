@@ -9,7 +9,7 @@ export interface RequestHistoryCreateData {
   action: string;
   oldStatus?: string;
   newStatus?: string;
-  notes?: string;
+  notes?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -18,9 +18,9 @@ export interface RequestHistoryEntry {
   requestId: string;
   userId: string;
   action: string;
-  oldStatus?: string;
-  newStatus?: string;
-  notes?: string;
+  oldStatus?: string | null;
+  newStatus?: string | null;
+  notes?: string | null;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   user: {

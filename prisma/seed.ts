@@ -88,7 +88,12 @@ async function main() {
         storage: "1TB SSD",
         display: "16-inch Liquid Retina XDR",
       }),
-      tags: JSON.stringify(["ProfiCo", "Development"]),
+      tags: {
+        create: [
+          { name: "ProfiCo" },
+          { name: "Development" },
+        ],
+      },
       condition: "excellent",
     },
   });
@@ -110,7 +115,11 @@ async function main() {
         storage: "512GB SSD",
         display: "13.4-inch FHD+",
       }),
-      tags: JSON.stringify(["ProfiCo"]),
+      tags: {
+        create: [
+          { name: "ProfiCo" },
+        ],
+      },
       condition: "good",
     },
   });
@@ -132,7 +141,11 @@ async function main() {
         resolution: "3440x1440",
         connection: "USB-C, HDMI",
       }),
-      tags: JSON.stringify(["ProfiCo"]),
+      tags: {
+        create: [
+          { name: "ProfiCo" },
+        ],
+      },
       condition: "excellent",
     },
   });

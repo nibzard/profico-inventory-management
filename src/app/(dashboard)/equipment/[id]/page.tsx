@@ -1,11 +1,9 @@
 // ABOUTME: Equipment detail page showing comprehensive equipment information
 // ABOUTME: Displays equipment details, history, maintenance records, and actions
 
-"use client";
-
-import { useState, useEffect, use, useCallback } from "react";
-import { useSession } from "next-auth/react";
-import { notFound, useRouter } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { redirect, notFound } from "next/navigation";
+import { db } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +24,8 @@ import {
   History
 } from "lucide-react";
 import Link from "next/link";
-import { EquipmentAssignDialog } from "@/components/equipment/equipment-assign-dialog";
-import { EquipmentUnassignDialog } from "@/components/equipment/equipment-unassign-dialog";
-import { EquipmentStatusDialog } from "@/components/equipment/equipment-status-dialog";
+import { EquipmentStatusDialogWrapper } from "@/components/equipment/equipment-status-dialog-wrapper";
+import { EquipmentAssignmentDialogs } from "@/components/equipment/equipment-assignment-dialogs";
 import { EquipmentHistoryComponent } from "@/components/equipment/equipment-history";
 import { EquipmentCategoriesTags } from "@/components/equipment/equipment-categories-tags";
 import { EquipmentPhotos } from "@/components/equipment/equipment-photos";
@@ -37,75 +34,55 @@ interface EquipmentDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
-  const { id } = use(params);
-  const router = useRouter();
-  const { data: session, status } = useSession();
-  const [equipment, setEquipment] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+export default async function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
+  const session = await auth();
+  
+  // If no session, redirect to signin with callback URL
+  if (!session?.user) {
+    redirect("/auth/signin");
+  }
+
+  const { id } = await params;
+  const { user } = session;
 
   // Fetch equipment data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (status === "loading") return; // Wait for session to load
-        
-        if (!session) {
-          // Don't redirect here - let middleware handle it
-          return;
-        }
+  const equipment = await db.equipment.findUnique({
+    where: { id },
+    include: {
+      currentOwner: {
+        select: { id: true, name: true, email: true, image: true },
+      },
+      maintenanceRecords: {
+        orderBy: { date: "desc" },
+        take: 3,
+      },
+      history: {
+        include: {
+          fromUser: {
+            select: { id: true, name: true, image: true },
+          },
+          toUser: {
+            select: { id: true, name: true, image: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
+    },
+  });
 
-        const equipmentResponse = await fetch(`/api/equipment/${id}`);
-        if (equipmentResponse.ok) {
-          const equipmentData = await equipmentResponse.json();
-          setEquipment(equipmentData);
-        } else if (equipmentResponse.status === 404) {
-          notFound();
-        } else {
-          console.error("Equipment fetch failed:", equipmentResponse.status);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Error fetching equipment:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [id, session, status]);
-
-  if (loading || !equipment || !session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
+  if (!equipment) {
+    notFound();
   }
-
-  // If no session after loading, show loading state
-  // Middleware will handle authentication redirects
 
   // Check if user has permission to view this equipment
-  if (session.user.role === "user" && equipment.currentOwnerId !== session.user.id && equipment.status !== "available") {
-    router.push("/dashboard");
-    return null; // Important: return null after redirect
+  if (user.role === "user" && equipment.currentOwnerId !== user.id && equipment.status !== "available") {
+    redirect("/dashboard");
   }
 
-  const canEdit = session.user.role === "admin" || session.user.role === "team_lead";
+  const canEdit = user.role === "admin" || user.role === "team_lead";
   const canAssign = canEdit && equipment.status === "available";
   const canUnassign = canEdit && equipment.status === "assigned";
-
-  // Callback for refreshing equipment data
-  const handleStatusChangeSuccess = useCallback(async () => {
-    if (equipment?.id) {
-      const response = await fetch(`/api/equipment/${equipment.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setEquipment(data);
-      }
-    }
-  }, [equipment?.id]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -259,7 +236,7 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
                           <p className="font-medium">{record.type}</p>
                           <p className="text-sm text-gray-600">{record.description}</p>
                           <p className="text-xs text-gray-500">
-                            {new Date(record.date).toLocaleDateString()} • {record.performedBy.name}
+                            {new Date(record.date).toLocaleDateString()} • {record.performedBy || "Unknown"}
                           </p>
                         </div>
                         <Badge variant={record.cost > 0 ? "default" : "outline"}>
@@ -291,26 +268,29 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {equipment.history.map((record) => (
-                    <div key={record.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={record.performedBy.image || ""} />
-                        <AvatarFallback className="text-xs">
-                          {record.performedBy.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">{record.action}</p>
-                        <p className="text-sm text-gray-600">{record.details}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(record.timestamp).toLocaleDateString()}
-                        </p>
+                  {equipment.history.map((record) => {
+                    const user = record.fromUser || record.toUser;
+                    return (
+                      <div key={record.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.image || ""} />
+                          <AvatarFallback className="text-xs">
+                            {user?.name
+                              ?.split(" ")
+                              .map((n) => n[0])
+                              .join("") || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium">{record.action}</p>
+                          <p className="text-sm text-gray-600">{record.notes}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(record.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -342,14 +322,14 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
                       </div>
                     </div>
                     {canUnassign && (
-                      <EquipmentUnassignDialog equipment={equipment} />
+                      <EquipmentAssignmentDialogs equipment={equipment} canAssign={false} canUnassign={true} />
                     )}
                   </div>
                 ) : (
                   <div className="text-center py-4">
                     <p className="text-gray-500 mb-3">Unassigned</p>
                     {canAssign && (
-                      <EquipmentAssignDialog equipment={equipment} />
+                      <EquipmentAssignmentDialogs equipment={equipment} canAssign={true} canUnassign={false} />
                     )}
                   </div>
                 )}
@@ -410,16 +390,7 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
                   </Link>
                 </Button>
                 
-                {canEdit && (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setStatusDialogOpen(true)}
-                  >
-                    <Wrench className="h-4 w-4 mr-2" />
-                    Change Status
-                  </Button>
-                )}
+                <EquipmentStatusDialogWrapper equipment={equipment} canEdit={canEdit} />
                 
                 <Button variant="outline" className="w-full" asChild>
                   <Link href={`/equipment/${equipment.id}/qr`}>
@@ -458,16 +429,6 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
           canManage={canEdit}
         />
       </div>
-
-      {/* Status Management Dialog */}
-      {equipment && (
-        <EquipmentStatusDialog
-          equipment={equipment}
-          open={statusDialogOpen}
-          onOpenChange={setStatusDialogOpen}
-          onSuccess={handleStatusChangeSuccess}
-        />
-      )}
     </div>
   );
 }

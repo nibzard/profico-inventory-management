@@ -77,7 +77,7 @@ export async function POST(
         );
       }
 
-      let updateData: any = {
+      const updateData: any = {
         approverId: user.id,
         status: 'rejected',
         rejectionReason: validatedData.reason,

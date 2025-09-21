@@ -193,7 +193,7 @@ export async function PUT(
       }
 
       // Build update data
-      let updateData: any = {
+      const updateData: any = {
         updatedAt: new Date(),
       };
 

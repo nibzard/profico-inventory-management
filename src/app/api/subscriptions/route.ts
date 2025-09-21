@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (renewalDateTo) {
-      where.renewalDate = { ...where.renewalDate, lte: new Date(renewalDateTo) };
+      where.renewalDate = { ...(where.renewalDate as object), lte: new Date(renewalDateTo) };
     }
 
     const [subscriptions, total] = await Promise.all([

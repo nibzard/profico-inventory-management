@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +27,7 @@ import {
   MoreHorizontal,
   Eye,
   Edit,
+  Trash2,
   Calendar,
   CreditCard,
   DollarSign,
@@ -53,7 +55,9 @@ export function SubscriptionList({
   userRole,
   userId,
 }: SubscriptionListProps) {
+  const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const getStatusBadge = (isActive: boolean, renewalDate: Date) => {
     const daysUntilRenewal = Math.ceil(
@@ -81,6 +85,64 @@ export function SubscriptionList({
 
   const canEdit = () => {
     return userRole === "admin" || userRole === "team_lead";
+  };
+
+  const canDelete = () => {
+    return userRole === "admin";
+  };
+
+  const handleDelete = async (subscriptionId: string) => {
+    if (!confirm("Are you sure you want to delete this subscription? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/subscriptions/${subscriptionId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete subscription");
+      }
+
+      // Refresh the page to show updated list
+      router.refresh();
+    } catch (error) {
+      console.error("Error deleting subscription:", error);
+      alert("Failed to delete subscription. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      // Delete all selected subscriptions
+      const deletePromises = Array.from(selectedItems).map(async (subscriptionId) => {
+        const response = await fetch(`/api/subscriptions/${subscriptionId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to delete subscription ${subscriptionId}`);
+        }
+        return response;
+      });
+
+      await Promise.all(deletePromises);
+
+      // Clear selection and refresh
+      setSelectedItems(new Set());
+      router.refresh();
+    } catch (error) {
+      console.error("Error bulk deleting subscriptions:", error);
+      alert("Failed to delete some subscriptions. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const canView = (subscription: SubscriptionWithUser) => {
@@ -160,9 +222,26 @@ export function SubscriptionList({
               Select All
             </label>
             {selectedItems.size > 0 && (
-              <Badge variant="secondary">
-                {selectedItems.size} selected
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary">
+                  {selectedItems.size} selected
+                </Badge>
+                {canDelete() && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete ${selectedItems.size} subscription(s)? This action cannot be undone.`)) {
+                        handleBulkDelete();
+                      }
+                    }}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Selected
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -210,6 +289,17 @@ export function SubscriptionList({
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </Link>
+                          </DropdownMenuItem>
+                        )}
+
+                        {canDelete() && (
+                          <DropdownMenuItem 
+                            onClick={() => handleDelete(subscription.id)}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

@@ -4,8 +4,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { SubscriptionForm } from "@/components/forms/subscription-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function AddSubscriptionPage() {

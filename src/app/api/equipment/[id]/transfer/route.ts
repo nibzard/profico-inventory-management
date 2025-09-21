@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause based on user role
-    let where: any = { status };
+    const where: any = { status };
 
     if (session.user.role === "user") {
       where.OR = [

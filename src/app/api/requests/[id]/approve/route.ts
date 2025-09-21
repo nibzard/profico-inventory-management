@@ -76,7 +76,7 @@ export async function POST(
         );
       }
 
-      let updateData: any = {
+      const updateData: any = {
         approverId: user.id,
         updatedAt: new Date(),
       };

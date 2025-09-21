@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { SubscriptionForm } from "@/components/forms/subscription-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 interface EditSubscriptionPageProps {

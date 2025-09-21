@@ -44,6 +44,7 @@ model User {
   // NextAuth.js relations
   accounts      Account[]
   sessions      Session[]
+  processedPayments      Payment[] @relation("PaymentProcessor")
 
   @@map("users")
 }
@@ -265,8 +266,31 @@ model SubscriptionInvoice {
 
   // Relations
   subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  payments     Payment[]
 
   @@map("subscription_invoices")
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  invoiceId     String
+  amount        Float
+  paymentMethod String    // "bank_transfer", "credit_card", "paypal", "other"
+  transactionId String?
+  status        String    @default("pending") // "pending", "completed", "failed", "refunded"
+  processedById String
+  processedAt   DateTime  @default(now())
+  notes         String?
+  refundAmount  Float?
+  refundReason  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  invoice       SubscriptionInvoice @relation(fields: [invoiceId], references: [id])
+  processedBy   User             @relation("PaymentProcessor", fields: [processedById], references: [id])
+  
+  @@map("payments")
 }
 
 model InventoryCheck {

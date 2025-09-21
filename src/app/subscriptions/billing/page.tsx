@@ -4,6 +4,9 @@
 import { BillingDashboard } from "@/components/subscriptions/billing-dashboard";
 import { InvoiceManagement } from "@/components/subscriptions/invoice-management";
 import { ReimbursementManagement } from "@/components/subscriptions/reimbursement-management";
+import { BillingAnalytics } from "@/components/subscriptions/billing-analytics";
+import { PaymentProcessing } from "@/components/subscriptions/payment-processing";
+import { BudgetTracking } from "@/components/subscriptions/budget-tracking";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, FileText, TrendingUp, CreditCard } from "lucide-react";
@@ -34,7 +37,7 @@ export default async function BillingPage() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard" className="flex items-center space-x-2">
             <TrendingUp className="h-4 w-4" />
             <span>Dashboard</span>
@@ -43,9 +46,17 @@ export default async function BillingPage() {
             <FileText className="h-4 w-4" />
             <span>Invoices</span>
           </TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center space-x-2">
+            <CreditCard className="h-4 w-4" />
+            <span>Payments</span>
+          </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center space-x-2">
             <DollarSign className="h-4 w-4" />
             <span>Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="budget" className="flex items-center space-x-2">
+            <TrendingUp className="h-4 w-4" />
+            <span>Budget</span>
           </TabsTrigger>
           <TabsTrigger value="reimbursements" className="flex items-center space-x-2">
             <CreditCard className="h-4 w-4" />
@@ -64,27 +75,16 @@ export default async function BillingPage() {
           />
         </TabsContent>
 
+        <TabsContent value="payments">
+          <PaymentProcessing subscriptions={subscriptions} invoices={invoices} />
+        </TabsContent>
+
         <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing Analytics</CardTitle>
-              <CardDescription>
-                Detailed cost analysis and spending insights
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <TrendingUp className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Advanced Analytics Coming Soon
-                </h3>
-                <p className="text-gray-500 max-w-md mx-auto">
-                  We're working on comprehensive billing analytics including cost trends, 
-                  vendor comparisons, and budget forecasting features.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <BillingAnalytics subscriptions={subscriptions} invoices={invoices} />
+        </TabsContent>
+
+        <TabsContent value="budget">
+          <BudgetTracking subscriptions={subscriptions} />
         </TabsContent>
 
         <TabsContent value="reimbursements">

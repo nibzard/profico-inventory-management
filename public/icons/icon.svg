@@ -1,0 +1,37 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="64" fill="#0f172a"/>
+  
+  <!-- Main Icon - Package/Box representing inventory -->
+  <g transform="translate(96, 96)">
+    <!-- Box -->
+    <path d="M40 120L160 80L280 120L280 280L160 320L40 280V120Z" fill="#3b82f6" stroke="#60a5fa" stroke-width="4"/>
+    <path d="M40 120L160 80L280 120L160 160L40 120Z" fill="#60a5fa"/>
+    <path d="M160 80L160 160L160 320" stroke="#1e40af" stroke-width="3"/>
+    <path d="M40 120L40 280" stroke="#1e40af" stroke-width="3"/>
+    <path d="M280 120L280 280" stroke="#1e40af" stroke-width="3"/>
+    
+    <!-- QR Code indicator -->
+    <g transform="translate(200, 140)">
+      <rect x="0" y="0" width="60" height="60" fill="#ffffff" rx="4"/>
+      <rect x="4" y="4" width="8" height="8" fill="#000000"/>
+      <rect x="16" y="4" width="8" height="8" fill="#000000"/>
+      <rect x="28" y="4" width="8" height="8" fill="#000000"/>
+      <rect x="48" y="4" width="8" height="8" fill="#000000"/>
+      <rect x="4" y="16" width="8" height="8" fill="#000000"/>
+      <rect x="28" y="16" width="8" height="8" fill="#000000"/>
+      <rect x="48" y="16" width="8" height="8" fill="#000000"/>
+      <rect x="4" y="28" width="8" height="8" fill="#000000"/>
+      <rect x="16" y="28" width="8" height="8" fill="#000000"/>
+      <rect x="48" y="28" width="8" height="8" fill="#000000"/>
+      <rect x="4" y="48" width="8" height="8" fill="#000000"/>
+      <rect x="16" y="48" width="8" height="8" fill="#000000"/>
+      <rect x="28" y="48" width="8" height="8" fill="#000000"/>
+      <rect x="48" y="48" width="8" height="8" fill="#000000"/>
+    </g>
+  </g>
+  
+  <!-- Text -->
+  <text x="256" y="420" font-family="Arial, sans-serif" font-size="42" font-weight="bold" text-anchor="middle" fill="#ffffff">ProfiCo</text>
+  <text x="256" y="460" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#94a3b8">Inventory</text>
+</svg>

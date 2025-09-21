@@ -1,10 +1,10 @@
-// ABOUTME: Subscriptions listing page with search, filtering, and role-based actions
-// ABOUTME: Main subscription management interface for viewing and managing all software subscriptions
+// ABOUTME: Enhanced subscription listing page with comprehensive data table, advanced filtering, and role-based actions
+// ABOUTME: Modern subscription management interface with sorting, search, export capabilities, and responsive design
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma";
-import { SubscriptionList } from "@/components/subscriptions/subscription-list";
+import { SubscriptionTable } from "@/components/subscriptions/subscription-table";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,26 +13,44 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, CreditCard, Calendar, Users } from "lucide-react";
+import { 
+  Plus, 
+  CreditCard, 
+  Calendar, 
+  Users, 
+  Download,
+  Filter,
+  Search,
+  AlertTriangle,
+  CheckCircle,
+  Clock
+} from "lucide-react";
 import Link from "next/link";
+import { SubscriptionStatus, BillingCycle } from "@/types/subscription";
 
 interface SearchParams {
   search?: string;
   vendor?: string;
-  billingFrequency?: string;
-  paymentMethod?: string;
-  isActive?: string;
-  isReimbursement?: string;
+  billingCycle?: BillingCycle;
+  status?: SubscriptionStatus;
+  assignedTo?: string;
+  costMin?: string;
+  costMax?: string;
   renewalDateFrom?: string;
   renewalDateTo?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   page?: string;
+  pageSize?: string;
+}
+
+interface PageProps {
+  searchParams: Promise<SearchParams>;
 }
 
 export default async function SubscriptionsPage({
   searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+}: PageProps) {
   const session = await auth();
 
   if (!session) {
@@ -40,47 +58,58 @@ export default async function SubscriptionsPage({
   }
 
   const { user } = session;
-  const currentPage = parseInt(searchParams.page || "1");
-  const pageSize = 12;
+  const params = await searchParams;
+  const currentPage = parseInt(params.page || "1");
+  const pageSize = parseInt(params.pageSize || "20");
 
   // Build filters
   const filters: Record<string, unknown> = {};
 
-  if (searchParams.search) {
+  if (params.search) {
     filters.OR = [
-      { softwareName: { contains: searchParams.search, mode: "insensitive" } },
-      { vendor: { contains: searchParams.search, mode: "insensitive" } },
-      { licenseKey: { contains: searchParams.search, mode: "insensitive" } },
+      { softwareName: { contains: params.search, mode: "insensitive" } },
+      { vendor: { contains: params.search, mode: "insensitive" } },
+      { licenseKey: { contains: params.search, mode: "insensitive" } },
     ];
   }
 
-  if (searchParams.vendor) {
-    filters.vendor = { contains: searchParams.vendor, mode: "insensitive" };
+  if (params.vendor) {
+    filters.vendor = { contains: params.vendor, mode: "insensitive" };
   }
 
-  if (searchParams.billingFrequency) {
-    filters.billingFrequency = searchParams.billingFrequency;
+  if (params.billingCycle) {
+    filters.billingFrequency = params.billingCycle;
   }
 
-  if (searchParams.paymentMethod) {
-    filters.paymentMethod = searchParams.paymentMethod;
-  }
-
-  if (searchParams.isActive) {
-    filters.isActive = searchParams.isActive === "true";
-  }
-
-  if (searchParams.isReimbursement) {
-    filters.isReimbursement = searchParams.isReimbursement === "true";
-  }
-
-  if (searchParams.renewalDateFrom || searchParams.renewalDateTo) {
-    filters.renewalDate = {};
-    if (searchParams.renewalDateFrom) {
-      filters.renewalDate.gte = new Date(searchParams.renewalDateFrom);
+  if (params.status) {
+    if (params.status === "ACTIVE") {
+      filters.isActive = true;
+    } else if (params.status === "INACTIVE") {
+      filters.isActive = false;
     }
-    if (searchParams.renewalDateTo) {
-      filters.renewalDate.lte = new Date(searchParams.renewalDateTo);
+  }
+
+  if (params.assignedTo) {
+    filters.assignedUserId = params.assignedTo;
+  }
+
+  if (params.costMin || params.costMax) {
+    filters.price = {};
+    if (params.costMin) {
+      filters.price.gte = parseFloat(params.costMin);
+    }
+    if (params.costMax) {
+      filters.price.lte = parseFloat(params.costMax);
+    }
+  }
+
+  if (params.renewalDateFrom || params.renewalDateTo) {
+    filters.renewalDate = {};
+    if (params.renewalDateFrom) {
+      filters.renewalDate.gte = new Date(params.renewalDateFrom);
+    }
+    if (params.renewalDateTo) {
+      filters.renewalDate.lte = new Date(params.renewalDateTo);
     }
   }
 
@@ -89,16 +118,29 @@ export default async function SubscriptionsPage({
     filters.assignedUserId = user.id;
   }
 
+  // Build sorting
+  const orderBy: Record<string, string> = {};
+  if (params.sortBy) {
+    orderBy[params.sortBy] = params.sortOrder || "asc";
+  } else {
+    orderBy.renewalDate = "asc";
+  }
+
   // Fetch subscriptions with pagination
   const [subscriptions, totalCount] = await Promise.all([
     db.subscription.findMany({
       where: filters,
       include: {
         assignedUser: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, role: true },
+        },
+        subscriptionInvoices: {
+          select: { id: true, status: true, dueDate: true, amount: true },
+          orderBy: { dueDate: "desc" },
+          take: 1,
         },
       },
-      orderBy: { renewalDate: "asc" },
+      orderBy,
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
     }),
@@ -127,7 +169,7 @@ export default async function SubscriptionsPage({
     .reduce((acc, stat) => acc + (stat._sum.price || 0), 0);
 
   // Get unique values for filters
-  const [vendors, billingFrequencies, paymentMethods] = await Promise.all([
+  const [vendors, billingCycles, users] = await Promise.all([
     db.subscription.findMany({
       select: { vendor: true },
       distinct: ["vendor"],
@@ -137,23 +179,50 @@ export default async function SubscriptionsPage({
       select: { billingFrequency: true },
       distinct: ["billingFrequency"],
     }),
-    db.subscription.findMany({
-      select: { paymentMethod: true },
-      distinct: ["paymentMethod"],
+    db.user.findMany({
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" },
     }),
   ]);
+
+  // Calculate subscription status distribution
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const statusCounts = await db.subscription.groupBy({
+    by: ["isActive"],
+    _count: { id: true },
+    where: user.role === "user" ? { assignedUserId: user.id } : {},
+  });
+
+  const expiringSoonCount = await db.subscription.count({
+    where: {
+      ...(user.role === "user" ? { assignedUserId: user.id } : {}),
+      renewalDate: { lte: thirtyDaysFromNow, gte: now },
+      isActive: true,
+    },
+  });
+
+  const expiredCount = await db.subscription.count({
+    where: {
+      ...(user.role === "user" ? { assignedUserId: user.id } : {}),
+      renewalDate: { lt: now },
+      isActive: true,
+    },
+  });
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Software Subscriptions</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Software Subscriptions</h1>
           <p className="text-gray-600 mt-2">
-            Manage software licenses and subscriptions
+            Manage software licenses, subscriptions, and billing
           </p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-3">
           {(user.role === "admin" || user.role === "team_lead") && (
             <Button asChild>
               <Link href="/subscriptions/add">
@@ -168,11 +237,17 @@ export default async function SubscriptionsPage({
               Billing Management
             </Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link href="/api/subscriptions/export">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Link>
+          </Button>
         </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -183,7 +258,7 @@ export default async function SubscriptionsPage({
           <CardContent>
             <div className="text-2xl font-bold">{totalSubscriptions}</div>
             <p className="text-xs text-muted-foreground">
-              {activeSubscriptions} active
+              {activeSubscriptions} active subscriptions
             </p>
           </CardContent>
         </Card>
@@ -200,7 +275,7 @@ export default async function SubscriptionsPage({
               €{monthlyRevenue.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Per month
+              Recurring monthly revenue
             </p>
           </CardContent>
         </Card>
@@ -217,7 +292,7 @@ export default async function SubscriptionsPage({
               €{yearlyRevenue.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Per year
+              Annual subscription value
             </p>
           </CardContent>
         </Card>
@@ -225,165 +300,42 @@ export default async function SubscriptionsPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Avg. Monthly Cost
+              Renewal Status
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              €{activeSubscriptions > 0 ? (monthlyRevenue / activeSubscriptions).toFixed(2) : "0.00"}
+              {expiredCount > 0 ? (
+                <span className="text-red-600">{expiredCount}</span>
+              ) : expiringSoonCount > 0 ? (
+                <span className="text-yellow-600">{expiringSoonCount}</span>
+              ) : (
+                <span className="text-green-600">0</span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Per active subscription
+              {expiredCount > 0 ? "Expired subscriptions" : 
+               expiringSoonCount > 0 ? "Expiring soon" : "All up to date"}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>
-            Filter subscriptions by various criteria
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form method="GET" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Search</label>
-                <input
-                  type="text"
-                  placeholder="Search subscriptions..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.search || ""}
-                  name="search"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Vendor</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.vendor || ""}
-                  name="vendor"
-                >
-                  <option value="">All Vendors</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor.vendor || "unknown"} value={vendor.vendor || ""}>
-                      {vendor.vendor || "Unknown"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Billing Frequency</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.billingFrequency || ""}
-                  name="billingFrequency"
-                >
-                  <option value="">All Frequencies</option>
-                  {billingFrequencies.map((freq) => (
-                    <option key={freq.billingFrequency} value={freq.billingFrequency}>
-                      {freq.billingFrequency.charAt(0).toUpperCase() + freq.billingFrequency.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Payment Method</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.paymentMethod || ""}
-                  name="paymentMethod"
-                >
-                  <option value="">All Methods</option>
-                  {paymentMethods.map((method) => (
-                    <option key={method.paymentMethod} value={method.paymentMethod}>
-                      {method.paymentMethod === "company_card" ? "Company Card" : "Personal Card"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.isActive || ""}
-                  name="isActive"
-                >
-                  <option value="">All Status</option>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Reimbursement</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.isReimbursement || ""}
-                  name="isReimbursement"
-                >
-                  <option value="">All Types</option>
-                  <option value="true">Requires Reimbursement</option>
-                  <option value="false">No Reimbursement</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Renewal From</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.renewalDateFrom || ""}
-                  name="renewalDateFrom"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Renewal To</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue={searchParams.renewalDateTo || ""}
-                  name="renewalDateTo"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <Button 
-                variant="outline" 
-                type="button"
-                onClick={() => {
-                  const url = new URL(window.location.href);
-                  url.search = '';
-                  window.location.href = url.toString();
-                }}
-              >
-                Clear Filters
-              </Button>
-              <Button type="submit">
-                Apply Filters
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Subscription List */}
-      <SubscriptionList
+      {/* Subscription Table */}
+      <SubscriptionTable
         subscriptions={subscriptions}
         currentPage={currentPage}
         totalPages={totalPages}
+        pageSize={pageSize}
         userRole={user.role}
         userId={user.id}
+        searchParams={params}
+        availableFilters={{
+          vendors: vendors.map(v => v.vendor).filter(Boolean) as string[],
+          billingCycles: billingCycles.map(b => b.billingFrequency) as BillingCycle[],
+          users: users,
+        }}
       />
     </div>
   );

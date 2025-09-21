@@ -1,0 +1,7 @@
+<svg width="96" height="96" xmlns="http://www.w3.org/2000/svg">
+    <rect width="96" height="96" fill="#0f172a"/>
+    <rect x="9.600000000000001" y="19.200000000000003" width="76.80000000000001" height="57.599999999999994" 
+          fill="#3b82f6" stroke="#60a5fa" stroke-width="2" rx="4.800000000000001"/>
+    <text x="48" y="86.4" font-family="Arial, sans-serif" 
+          font-size="7.68" font-weight="bold" text-anchor="middle" fill="#ffffff">PC</text>
+  </svg>

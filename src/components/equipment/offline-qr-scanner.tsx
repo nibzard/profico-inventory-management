@@ -138,6 +138,21 @@ export default function OfflineQRScanner({
       setError(null);
       setScanResult(null);
       
+      // Check browser environment and camera support
+      if (typeof navigator === 'undefined' || typeof window === 'undefined') {
+        setError('Camera not available in this environment');
+        setIsScanning(false);
+        setScanning(false);
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Camera not supported by this browser');
+        setIsScanning(false);
+        setScanning(false);
+        return;
+      }
+      
       // Wait for the video element to be rendered
       await new Promise(resolve => setTimeout(resolve, 100));
       
@@ -193,7 +208,18 @@ export default function OfflineQRScanner({
       );
     } catch (error) {
       console.error('Error starting scanner:', error);
-      setError('Failed to start camera. Please check permissions.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+        setError('Camera permission denied. Please allow camera access and try again.');
+      } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('DevicesNotFoundError')) {
+        setError('No camera found. Please connect a camera and try again.');
+      } else if (errorMessage.includes('NotSupportedError')) {
+        setError('Camera not supported by this browser.');
+      } else {
+        setError('Failed to start camera. Please check permissions and try again.');
+      }
+      
       setIsScanning(false);
       setScanning(false);
     }

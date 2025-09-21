@@ -104,8 +104,7 @@ export async function POST(request: NextRequest) {
     await db.equipmentHistory.create({
       data: {
         equipmentId: validatedData.equipmentId,
-        action: "FILES_UPLOADED",
-        performedBy: session.user.id,
+        action: "files_uploaded",
         notes: `Uploaded ${uploadedFiles.length} file(s) to equipment record`,
       },
     });
@@ -255,7 +254,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     // Update equipment photos if this was an image
-    if (file.type.startsWith('image/') && file.equipment.photos) {
+    if (file.type.startsWith('image/') && file.equipment?.photos) {
       const currentPhotos = JSON.parse(file.equipment.photos);
       const updatedPhotos = currentPhotos.filter((photo: any) => photo.id !== fileId);
       
@@ -272,8 +271,7 @@ export async function DELETE(request: NextRequest) {
     await db.equipmentHistory.create({
       data: {
         equipmentId: file.equipmentId,
-        action: "FILE_DELETED",
-        performedBy: session.user.id,
+        action: "file_deleted",
         notes: `Deleted file: ${file.name}`,
       },
     });

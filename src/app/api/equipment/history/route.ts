@@ -190,11 +190,6 @@ async function getEquipmentAnalytics(equipmentId: string) {
     where: { equipmentId },
     orderBy: { date: "desc" },
     take: 5,
-    include: {
-      performedBy: {
-        select: { id: true, name: true },
-      },
-    },
   });
 
   // Get transfer count
@@ -278,11 +273,9 @@ export async function POST(request: NextRequest) {
     const historyEntry = await db.equipmentHistory.create({
       data: {
         equipmentId: validatedData.equipmentId,
-        action: validatedData.action.toUpperCase(),
-        performedBy: session.user.id,
+        action: validatedData.action.toLowerCase(),
         notes: validatedData.notes,
         condition: validatedData.condition,
-        createdAt: validatedData.date ? new Date(validatedData.date) : new Date(),
       },
       include: {
         equipment: {
@@ -290,13 +283,6 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             serialNumber: true,
-          },
-        },
-        performedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
           },
         },
       },

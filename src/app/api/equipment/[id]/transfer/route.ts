@@ -33,8 +33,9 @@ export async function POST(
     const equipment = await db.equipment.findUnique({
       where: { id: equipmentId },
       include: {
-        currentOwner: true,
-        team: true,
+        currentOwner: {
+          include: { team: true },
+        },
       },
     });
 
@@ -86,7 +87,7 @@ export async function POST(
       }
     } else if (currentUser.role === "team_lead") {
       // Team lead transferring to another team needs admin approval
-      if (equipment.team?.id !== recipient.team?.id) {
+      if (equipment.currentOwner?.team?.id !== recipient.team?.id) {
         needsApproval = true;
         approver = await db.user.findFirst({
           where: { role: "admin", isActive: true },
@@ -179,10 +180,7 @@ async function performImmediateTransfer(
       },
       include: {
         currentOwner: {
-          select: { id: true, name: true, email: true },
-        },
-        team: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, team: { select: { id: true, name: true } } },
         },
       },
     });

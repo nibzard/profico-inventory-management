@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate equipment and subscription records if requested
-    let equipmentRecords = [];
-    let subscriptionRecords = [];
+    let equipmentRecords: any[] = [];
+    let subscriptionRecords: any[] = [];
     
     if (createEquipment && (validation.valid || saveAsDraft) && ocrData.equipment?.length) {
       equipmentRecords = await geminiOCRService.generateEquipmentFromOCR(ocrData);

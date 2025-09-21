@@ -53,10 +53,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           currentOwner: {
-            select: { id: true, name: true, email: true },
-          },
-          team: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, email: true, team: { select: { id: true, name: true } } },
           },
         },
         orderBy: { updatedAt: "desc" },
@@ -96,18 +93,25 @@ export async function POST(request: NextRequest) {
 
     const equipment = await db.equipment.create({
       data: {
-        ...validatedData,
-        purchaseDate: new Date(validatedData.purchaseDate),
-        warrantyExpiry: validatedData.warrantyExpiry ? new Date(validatedData.warrantyExpiry) : null,
-        lastMaintenanceDate: validatedData.lastMaintenanceDate ? new Date(validatedData.lastMaintenanceDate) : null,
+        name: validatedData.name,
+        brand: validatedData.brand,
+        model: validatedData.model,
+        serialNumber: validatedData.serialNumber,
+        category: validatedData.category,
+        status: validatedData.status,
+        purchaseDate: validatedData.purchaseDate,
+        purchasePrice: validatedData.purchasePrice,
+        purchaseMethod: "off_the_shelf", // Default value
+        warrantyExpiry: validatedData.warrantyExpiry,
+        lastMaintenanceDate: validatedData.lastMaintenanceDate,
+        location: validatedData.location,
+        notes: validatedData.notes,
         createdBy: session.user.id,
+        teamId: validatedData.teamId,
       },
       include: {
         currentOwner: {
-          select: { id: true, name: true, email: true },
-        },
-        team: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, team: { select: { id: true, name: true } } },
         },
       },
     });
@@ -116,11 +120,8 @@ export async function POST(request: NextRequest) {
     await db.equipmentHistory.create({
       data: {
         equipmentId: equipment.id,
-        action: "CREATED",
-        performedBy: session.user.id,
-        details: "Equipment added to inventory",
-        previousState: null,
-        newState: equipment,
+        action: "created",
+        notes: "Equipment added to inventory",
       },
     });
 

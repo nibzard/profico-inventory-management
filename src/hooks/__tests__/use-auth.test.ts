@@ -10,28 +10,31 @@ jest.mock("next-auth/react");
 
 const mockUseSession = useSession as jest.MockedFunction<typeof useSession>;
 
-describe("useAuth", () => {
-  const mockSession = {
-    data: {
-      user: {
-        id: "1",
-        name: "Test User",
-        email: "test@example.com",
-        role: "user" as const,
-      },
+// Create a proper session mock with the update function
+const createMockSession = (userData: any, status: string) => ({
+  data: userData ? {
+    user: {
+      ...userData,
     },
-    status: "authenticated" as const,
-  };
+  } : null,
+  status,
+  update: jest.fn(),
+} as any);
+
+describe("useAuth", () => {
+  const mockSession = createMockSession({
+    id: "1",
+    name: "Test User",
+    email: "test@example.com",
+    role: "user" as const,
+  }, "authenticated");
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it("should return loading state when session is loading", () => {
-    mockUseSession.mockReturnValue({
-      data: null,
-      status: "loading",
-    });
+    mockUseSession.mockReturnValue(createMockSession(null, "loading"));
 
     const { result } = renderHook(() => useAuth());
 
@@ -53,10 +56,7 @@ describe("useAuth", () => {
   });
 
   it("should return unauthenticated state when no session", () => {
-    mockUseSession.mockReturnValue({
-      data: null,
-      status: "unauthenticated",
-    });
+    mockUseSession.mockReturnValue(createMockSession(null, "unauthenticated"));
 
     const { result } = renderHook(() => useAuth());
 
@@ -79,17 +79,12 @@ describe("useAuth", () => {
     });
 
     it("should return true when user has the required role", () => {
-      const adminSession = {
-        data: {
-          user: {
-            id: "1",
-            name: "Admin User",
-            email: "admin@example.com",
-            role: "admin" as const,
-          },
-        },
-        status: "authenticated" as const,
-      };
+      const adminSession = createMockSession({
+        id: "1",
+        name: "Admin User",
+        email: "admin@example.com",
+        role: "admin" as const,
+      }, "authenticated");
 
       mockUseSession.mockReturnValue(adminSession);
 
@@ -141,17 +136,12 @@ describe("useAuth", () => {
 
   describe("permissions", () => {
     describe("admin user permissions", () => {
-      const adminSession = {
-        data: {
-          user: {
-            id: "1",
-            name: "Admin User",
-            email: "admin@example.com",
-            role: "admin" as const,
-          },
-        },
-        status: "authenticated" as const,
-      };
+      const adminSession = createMockSession({
+        id: "1",
+        name: "Admin User",
+        email: "admin@example.com",
+        role: "admin" as const,
+      }, "authenticated");
 
       beforeEach(() => {
         mockUseSession.mockReturnValue(adminSession);
@@ -170,17 +160,12 @@ describe("useAuth", () => {
     });
 
     describe("team lead user permissions", () => {
-      const teamLeadSession = {
-        data: {
-          user: {
-            id: "2",
-            name: "Team Lead User",
-            email: "teamlead@example.com",
-            role: "team_lead" as const,
-          },
-        },
-        status: "authenticated" as const,
-      };
+      const teamLeadSession = createMockSession({
+        id: "2",
+        name: "Team Lead User",
+        email: "teamlead@example.com",
+        role: "team_lead" as const,
+      }, "authenticated");
 
       beforeEach(() => {
         mockUseSession.mockReturnValue(teamLeadSession);
@@ -199,17 +184,12 @@ describe("useAuth", () => {
     });
 
     describe("regular user permissions", () => {
-      const userSession = {
-        data: {
-          user: {
-            id: "3",
-            name: "Regular User",
-            email: "user@example.com",
-            role: "user" as const,
-          },
-        },
-        status: "authenticated" as const,
-      };
+      const userSession = createMockSession({
+        id: "3",
+        name: "Regular User",
+        email: "user@example.com",
+        role: "user" as const,
+      }, "authenticated");
 
       beforeEach(() => {
         mockUseSession.mockReturnValue(userSession);
@@ -268,10 +248,7 @@ describe("useAuth", () => {
 
   it("should handle session updates", () => {
     // Start with unauthenticated state
-    mockUseSession.mockReturnValue({
-      data: null,
-      status: "unauthenticated",
-    });
+    mockUseSession.mockReturnValue(createMockSession(null, "unauthenticated"));
 
     const { result, rerender } = renderHook(() => useAuth());
 
@@ -287,12 +264,7 @@ describe("useAuth", () => {
   });
 
   it("should handle session with null user", () => {
-    const sessionWithNullUser = {
-      data: {
-        user: null,
-      },
-      status: "authenticated" as const,
-    };
+    const sessionWithNullUser = createMockSession(null, "authenticated");
 
     mockUseSession.mockReturnValue(sessionWithNullUser);
 

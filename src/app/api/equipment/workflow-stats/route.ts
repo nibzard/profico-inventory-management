@@ -112,10 +112,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Get top users by assignment count
+    const topUserIds = userAssignmentMetrics
+      .map(metric => metric.currentOwnerId)
+      .filter((id): id is string => id !== null);
+    
     const topUsers = await db.user.findMany({
       where: {
         id: {
-          in: userAssignmentMetrics.map(metric => metric.currentOwnerId),
+          in: topUserIds,
         },
       },
       select: {

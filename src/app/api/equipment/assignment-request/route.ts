@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       const assignmentRequest = await tx.equipmentTransferRequest.create({
         data: {
           equipmentId: validatedData.equipmentId,
-          fromUserId: equipment.currentOwnerId?.id,
+          fromUserId: equipment.currentOwnerId,
           toUserId: validatedData.targetUserId,
           requestedById: validatedData.requestedById,
           reason: validatedData.justification,
@@ -152,9 +152,9 @@ export async function POST(request: NextRequest) {
         await tx.equipmentHistory.create({
           data: {
             equipmentId: validatedData.equipmentId,
-            fromUserId: equipment.currentOwnerId?.id,
+            fromUserId: equipment.currentOwnerId,
             toUserId: validatedData.targetUserId,
-            action: "ASSIGNED",
+            action: "assigned",
             condition: equipment.condition,
             notes: `Equipment assigned via workflow: ${validatedData.justification}`,
           },

@@ -29,6 +29,15 @@ const equipmentCategories = [
   { value: "other", label: "Other" },
 ];
 
+const equipmentExamples = [
+  { category: "Computers & Laptops", examples: "MacBook Pro 14-inch, Dell XPS 15, ThinkPad T14" },
+  { category: "Mobile Devices & Tablets", examples: "iPhone 15, iPad Pro, Samsung Galaxy S23" },
+  { category: "Peripherals", examples: "Logitech MX Master 3, Keychron K2, Dell UltraSharp Monitor" },
+  { category: "Networking Equipment", examples: "Cisco Router, Network Switch, WiFi Access Point" },
+  { category: "Audio/Video Equipment", examples: "Sony WH-1000XM5, Logitech C920, Blue Yeti Mic" },
+  { category: "Storage Devices", examples: "Samsung T7 SSD, Seagate External Drive, NAS Storage" },
+];
+
 const priorityLevels = [
   {
     value: "low",
@@ -57,10 +66,11 @@ export function EquipmentRequestForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     equipmentType: "",
-    category: "",
     justification: "",
     priority: "medium",
     specificRequirements: "",
+    budget: "",
+    neededBy: "",
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -79,11 +89,6 @@ export function EquipmentRequestForm() {
       return;
     }
 
-    if (!formData.category) {
-      toast.error("Please select a category");
-      return;
-    }
-
     if (
       !formData.justification.trim() ||
       formData.justification.trim().length < 20
@@ -91,6 +96,12 @@ export function EquipmentRequestForm() {
       toast.error(
         "Please provide a detailed justification (at least 20 characters)"
       );
+      return;
+    }
+
+    // Validate budget if provided
+    if (formData.budget && !/^\d+(\.\d{1,2})?$/.test(formData.budget)) {
+      toast.error("Please enter a valid budget amount");
       return;
     }
 
@@ -104,11 +115,12 @@ export function EquipmentRequestForm() {
         },
         body: JSON.stringify({
           equipmentType: formData.equipmentType.trim(),
-          category: formData.category,
           justification: formData.justification.trim(),
           priority: formData.priority,
           specificRequirements:
             formData.specificRequirements.trim() || undefined,
+          budget: formData.budget ? parseFloat(formData.budget) : undefined,
+          neededBy: formData.neededBy || undefined,
         }),
       });
 
@@ -132,39 +144,30 @@ export function EquipmentRequestForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="equipmentType">Equipment Type *</Label>
-          <Input
-            id="equipmentType"
-            placeholder="e.g., MacBook Pro 14-inch, iPhone 15, Dell Monitor"
-            value={formData.equipmentType}
-            onChange={(e) => handleInputChange("equipmentType", e.target.value)}
-            required
-            className="mt-1"
-          />
-          <p className="text-xs text-gray-600 mt-1">
-            Be specific about the type and model if known
-          </p>
-        </div>
-
-        <div>
-          <Label htmlFor="category">Category *</Label>
-          <Select
-            value={formData.category}
-            onValueChange={(value) => handleInputChange("category", value)}
-          >
-            <SelectTrigger className="mt-1">
-              <SelectValue placeholder="Select equipment category" />
-            </SelectTrigger>
-            <SelectContent>
-              {equipmentCategories.map((category) => (
-                <SelectItem key={category.value} value={category.value}>
-                  {category.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div>
+        <Label htmlFor="equipmentType">Equipment Type *</Label>
+        <Input
+          id="equipmentType"
+          placeholder="e.g., MacBook Pro 14-inch, iPhone 15, Dell Monitor"
+          value={formData.equipmentType}
+          onChange={(e) => handleInputChange("equipmentType", e.target.value)}
+          required
+          className="mt-1"
+        />
+        <p className="text-xs text-gray-600 mt-1">
+          Be specific about the type and model if known
+        </p>
+        
+        {/* Equipment Examples */}
+        <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs font-medium text-gray-700 mb-1">Common Examples:</p>
+          <div className="space-y-1">
+            {equipmentExamples.slice(0, 3).map((example) => (
+              <div key={example.category} className="text-xs text-gray-600">
+                <span className="font-medium">{example.category}:</span> {example.examples}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -207,6 +210,39 @@ export function EquipmentRequestForm() {
           Minimum 20 characters. The more detail you provide, the faster the
           approval process.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="budget">Budget (€) (Optional)</Label>
+          <Input
+            id="budget"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="e.g., 1500.00"
+            value={formData.budget}
+            onChange={(e) => handleInputChange("budget", e.target.value)}
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-600 mt-1">
+            Specify your budget limit if applicable
+          </p>
+        </div>
+
+        <div>
+          <Label htmlFor="neededBy">Needed By (Optional)</Label>
+          <Input
+            id="neededBy"
+            type="date"
+            value={formData.neededBy}
+            onChange={(e) => handleInputChange("neededBy", e.target.value)}
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-600 mt-1">
+            When do you need this equipment?
+          </p>
+        </div>
       </div>
 
       <div>

@@ -37,9 +37,17 @@ export interface EquipmentRequestEmailData {
   status: string;
   requester: EmailUser;
   approver?: EmailUser;
+  equipment?: EmailEquipment;
   rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface EmailEquipment {
+  id: string;
+  name: string;
+  serialNumber: string;
+  status: string;
 }
 
 /**
@@ -653,6 +661,122 @@ ProfiCo Inventory Management System
 
     return { subject, html, text };
   }
+
+  /**
+   * Email template for notifying requester about equipment assignment
+   */
+  static equipmentAssigned(request: EquipmentRequestEmailData): {
+    subject: string;
+    html: string;
+    text: string;
+  } {
+    const subject = `Equipment Assigned: ${request.equipmentType}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #16a34a; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f8fafc; padding: 20px; border: 1px solid #e2e8f0; }
+            .footer { background-color: #64748b; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; }
+            .equipment-info { background-color: #dcfce7; border: 1px solid #16a34a; border-radius: 6px; padding: 15px; margin: 15px 0; }
+            .detail-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 4px 0; border-bottom: 1px solid #e2e8f0; }
+            .label { font-weight: bold; color: #475569; }
+            .action-button { display: inline-block; background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Equipment Assigned to You! 🎉</h1>
+              <p>Your equipment request has been fulfilled</p>
+            </div>
+            
+            <div class="content">
+              <p>Great news! Your equipment request has been approved and the following equipment has been assigned to you:</p>
+              
+              ${request.equipment ? `
+              <div class="equipment-info">
+                <h3 style="margin-top: 0; color: #16a34a;">Assigned Equipment</h3>
+                <div class="detail-row">
+                  <span class="label">Equipment Name:</span> <span>${request.equipment.name}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Serial Number:</span> <span>${request.equipment.serialNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Status:</span> <span>${request.equipment.status.replace('_', ' ').toUpperCase()}</span>
+                </div>
+              </div>
+              ` : ''}
+              
+              <div class="detail-row">
+                <span class="label">Request ID:</span> #${request.id.slice(-8)}
+              </div>
+              <div class="detail-row">
+                <span class="label">Requested Equipment:</span> <span>${request.equipmentType}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Request Status:</span> <span>${request.status.toUpperCase()}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Assigned:</span> <span>${new Date().toLocaleDateString()}</span>
+              </div>
+              
+              <p style="margin-top: 20px; padding: 10px; background-color: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                <strong>Next Steps:</strong> Please contact your team lead or admin to collect your equipment. Make sure to inspect the equipment upon receipt and report any issues immediately.
+              </p>
+              
+              <div style="text-align: center; margin-top: 25px;">
+                <a href="${process.env.NEXTAUTH_URL}/dashboard/requests/${request.id}" class="action-button">
+                  View Request Details
+                </a>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>ProfiCo Inventory Management System</p>
+              <p style="font-size: 12px; margin-top: 8px;">
+                Your equipment is ready for collection. Please keep it safe and return it when no longer needed.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `
+Equipment Assigned to You! 🎉
+
+Great news! Your equipment request has been approved and equipment has been assigned to you.
+
+${request.equipment ? `
+ASSIGNED EQUIPMENT:
+Equipment Name: ${request.equipment.name}
+Serial Number: ${request.equipment.serialNumber}
+Status: ${request.equipment.status.replace('_', ' ').toUpperCase()}
+` : ''}
+
+REQUEST DETAILS:
+Request ID: #${request.id.slice(-8)}
+Requested Equipment: ${request.equipmentType}
+Request Status: ${request.status.toUpperCase()}
+Assigned: ${new Date().toLocaleDateString()}
+
+Next Steps: Please contact your team lead or admin to collect your equipment. Make sure to inspect the equipment upon receipt and report any issues immediately.
+
+View request details at: ${process.env.NEXTAUTH_URL}/dashboard/requests/${request.id}
+
+--
+ProfiCo Inventory Management System
+Your equipment is ready for collection. Please keep it safe and return it when no longer needed.
+    `.trim();
+
+    return { subject, html, text };
+  }
 }
 
 /**
@@ -797,6 +921,28 @@ export class EmailNotificationService {
     } catch (error) {
       console.error(`Failed to send status change notification for request ${request.id}:`, error);
       throw new Error('Failed to send status change notification email');
+    }
+  }
+
+  /**
+   * Send equipment assignment notification to the requester
+   */
+  static async notifyRequesterOfEquipmentAssignment(request: EquipmentRequestEmailData): Promise<void> {
+    const template = EmailTemplates.equipmentAssigned(request);
+
+    try {
+      const result = await getResendInstance().emails.send({
+        from: fromEmail,
+        to: request.requester.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      console.log(`Equipment assignment notification sent to requester for request ${request.id}:`, result);
+    } catch (error) {
+      console.error(`Failed to send equipment assignment notification for request ${request.id}:`, error);
+      throw new Error('Failed to send equipment assignment notification email');
     }
   }
 

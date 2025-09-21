@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  Package,
 } from "lucide-react";
 import type { EquipmentRequest, User, Equipment } from "@prisma/client";
 
@@ -263,6 +264,15 @@ export function RequestsList({
                       </DropdownMenuItem>
                     )}
 
+                    {userRole === "admin" && request.status === "approved" && !request.equipmentId && (
+                      <DropdownMenuItem asChild>
+                        <Link href={`/requests/${request.id}/assign`}>
+                          <Package className="h-4 w-4 mr-2" />
+                          Assign Equipment
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+
                     {canApprove(request) && (
                       <>
                         <DropdownMenuItem asChild>
@@ -354,6 +364,13 @@ export function RequestsList({
                       View Full Details
                     </Link>
                   </Button>
+                  {userRole === "admin" && request.status === "approved" && !request.equipmentId && (
+                    <Button asChild size="sm">
+                      <Link href={`/requests/${request.id}/assign`}>
+                        Assign Equipment
+                      </Link>
+                    </Button>
+                  )}
                   {canApprove(request) && (
                     <Button asChild size="sm">
                       <Link href={`/requests/${request.id}/approve`}>

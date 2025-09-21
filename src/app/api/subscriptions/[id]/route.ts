@@ -5,16 +5,17 @@ import { subscriptionSchemas, InputSanitizer } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const subscription = await db.subscription.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         assignedUser: {
           select: { id: true, name: true, email: true },
@@ -52,16 +53,17 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session || (session.user.role !== "admin" && session.user.role !== "team_lead")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const existingSubscription = await db.subscription.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingSubscription) {
@@ -89,7 +91,7 @@ export async function PUT(
     };
 
     const subscription = await db.subscription.update({
-      where: { id: params.id },
+      where: { id },
       data: sanitizedData,
       include: {
         assignedUser: {
@@ -117,16 +119,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const subscription = await db.subscription.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!subscription) {
@@ -134,7 +137,7 @@ export async function DELETE(
     }
 
     await db.subscription.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Subscription deleted successfully" });

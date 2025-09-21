@@ -409,6 +409,15 @@ export default async function RequestDetailPage({ params }: PageProps) {
                 </Button>
               )}
 
+              {user.role === "admin" && request.status === "approved" && !request.equipmentId && (
+                <Button asChild>
+                  <Link href={`/requests/${request.id}/assign`}>
+                    <Package className="h-4 w-4 mr-2" />
+                    Assign Equipment
+                  </Link>
+                </Button>
+              )}
+
               {canApprove() && (
                 <>
                   <Button asChild>

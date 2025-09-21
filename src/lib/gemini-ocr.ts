@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import * as pdf from 'pdf-parse';
+import pdf from 'pdf-parse';
 
 // Initialize Gemini AI client
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '');
@@ -308,9 +308,9 @@ ${text}`;
     const dateMatch = text.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i);
     
     return {
-      vendor: vendorMatch?.[1]?.trim() || null,
-      amount: amountMatch ? parseFloat(amountMatch[1].replace(',', '')) : null,
-      date: dateMatch ? this.normalizeDateFormat(dateMatch[1]) : null,
+      vendor: vendorMatch?.[1]?.trim() || undefined,
+      amount: amountMatch ? parseFloat(amountMatch[1].replace(',', '')) : undefined,
+      date: dateMatch ? this.normalizeDateFormat(dateMatch[1]) : undefined,
       confidence: 0.3, // Low confidence for fallback
       rawText: text,
       extractionDetails: {
@@ -350,8 +350,8 @@ ${text}`;
     for (const item of data.equipment || []) {
       const equipment = {
         name: item.name,
-        serialNumber: item.serialNumber || null,
-        specifications: item.specifications || null,
+        serialNumber: item.serialNumber || undefined,
+        specifications: item.specifications || undefined,
         category: this.categorizeEquipment(item.name),
         status: 'pending',
         purchasePrice: data.amount ? data.amount / (data.equipment?.length || 1) : 0,

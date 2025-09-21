@@ -88,18 +88,14 @@ export async function POST(
           type: validatedData.type,
           description: validatedData.description,
           status: "pending",
+          date: new Date(),
           scheduledAt: validatedData.scheduledDate ? new Date(validatedData.scheduledDate) : new Date(),
           cost: validatedData.estimatedCost || 0,
-          performedBy: validatedData.assignedTo ? { connect: { id: validatedData.assignedTo } } : undefined,
+          performedBy: validatedData.assignedTo,
           vendor: validatedData.vendor,
           notes: validatedData.notes,
         },
-        include: {
-          performedBy: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      });
+        });
 
       // Update equipment status if transitioning to maintenance
       if (equipment.status !== "maintenance") {
@@ -167,15 +163,6 @@ export async function GET(
         status: true,
         lastMaintenanceDate: true,
         nextMaintenanceDate: true,
-        maintenanceRecords: {
-          orderBy: { date: "desc" },
-          take: 10,
-          include: {
-            performedBy: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-        },
       },
     });
 
@@ -183,9 +170,15 @@ export async function GET(
       return NextResponse.json({ error: "Equipment not found" }, { status: 404 });
     }
 
+    // Get maintenance records separately
+    const maintenanceRecords = await db.maintenanceRecord.findMany({
+      where: { equipmentId },
+      orderBy: { createdAt: "desc" },
+    });
+
     return NextResponse.json({
       equipment,
-      maintenanceHistory: equipment.maintenanceRecords,
+      maintenanceHistory: maintenanceRecords,
     });
   } catch (error) {
     console.error("Error fetching maintenance data:", error);
@@ -243,12 +236,7 @@ export async function PATCH(
                         validatedData.status === "completed" ? new Date() : undefined,
           notes: validatedData.resolutionNotes,
         },
-        include: {
-          performedBy: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      });
+        });
 
       // Update equipment status based on maintenance completion
       if (validatedData.status === "completed") {

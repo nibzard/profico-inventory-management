@@ -129,9 +129,6 @@ export async function POST(
           currentOwner: {
             select: { id: true, name: true, email: true },
           },
-          team: {
-            select: { id: true, name: true },
-          },
         },
       });
 
@@ -142,7 +139,7 @@ export async function POST(
             equipmentId,
             type: "corrective",
             status: "pending",
-            scheduledAt: new Date(),
+            date: new Date(),
             description: validatedData.reason || "Equipment marked for maintenance",
             notes: validatedData.notes,
           },

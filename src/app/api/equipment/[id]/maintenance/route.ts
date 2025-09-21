@@ -26,11 +26,6 @@ export async function GET(
 
     const maintenanceRecords = await db.maintenanceRecord.findMany({
       where: { equipmentId: id },
-      include: {
-        performedBy: {
-          select: { id: true, name: true },
-        },
-      },
       orderBy: { date: "desc" },
     });
 
@@ -103,11 +98,9 @@ export async function POST(
     await db.equipmentHistory.create({
       data: {
         equipmentId: id,
-        action: "MAINTENANCE",
-        performedBy: session.user.id,
-        details: `${validatedData.type.toUpperCase()} maintenance performed`,
-        previousState: equipment,
-        newState: updatedEquipment,
+        fromUserId: session.user.id,
+        action: "maintenance",
+        notes: `${validatedData.type.toUpperCase()} maintenance performed`,
       },
     });
 
@@ -115,7 +108,7 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation error", details: error.errors },
+        { error: "Validation error", details: error.issues },
         { status: 400 }
       );
     }

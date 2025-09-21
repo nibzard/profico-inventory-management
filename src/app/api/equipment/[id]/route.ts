@@ -20,21 +20,16 @@ export async function GET(
         currentOwner: {
           select: { id: true, name: true, email: true },
         },
-        team: {
-          select: { id: true, name: true },
-        },
         maintenanceRecords: {
           orderBy: { date: "desc" },
-          include: {
-            performedBy: {
-              select: { id: true, name: true },
-            },
-          },
         },
         history: {
-          orderBy: { timestamp: "desc" },
+          orderBy: { createdAt: "desc" },
           include: {
-            performedBy: {
+            fromUser: {
+              select: { id: true, name: true },
+            },
+            toUser: {
               select: { id: true, name: true },
             },
           },
@@ -91,14 +86,10 @@ export async function PUT(
         purchaseDate: new Date(validatedData.purchaseDate),
         warrantyExpiry: validatedData.warrantyExpiry ? new Date(validatedData.warrantyExpiry) : null,
         lastMaintenanceDate: validatedData.lastMaintenanceDate ? new Date(validatedData.lastMaintenanceDate) : null,
-        updatedBy: session.user.id,
       },
       include: {
         currentOwner: {
           select: { id: true, name: true, email: true },
-        },
-        team: {
-          select: { id: true, name: true },
         },
       },
     });
@@ -107,11 +98,9 @@ export async function PUT(
     await db.equipmentHistory.create({
       data: {
         equipmentId: id,
-        action: "UPDATED",
-        performedBy: session.user.id,
-        details: "Equipment details updated",
-        previousState: existingEquipment,
-        newState: updatedEquipment,
+        fromUserId: session.user.id,
+        action: "updated",
+        notes: "Equipment details updated",
       },
     });
 
@@ -156,7 +145,7 @@ export async function DELETE(
       where: { id },
       data: {
         status: "decommissioned",
-        updatedBy: session.user.id,
+        // updatedBy field doesn't exist in Equipment model
       },
     });
 
@@ -164,11 +153,10 @@ export async function DELETE(
     await db.equipmentHistory.create({
       data: {
         equipmentId: id,
-        action: "DECOMMISSIONED",
-        performedBy: session.user.id,
-        details: "Equipment decommissioned",
-        previousState: existingEquipment,
-        newState: { ...existingEquipment, status: "decommissioned" },
+        fromUserId: session.user.id,
+        action: "decommissioned",
+        notes: "Equipment decommissioned",
+        // newState field doesn't exist in EquipmentHistory model
       },
     });
 

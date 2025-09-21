@@ -8,7 +8,7 @@ import { toast } from "sonner";
 // Use global mocks from jest.setup.js - no local overrides needed
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
-// @ts-ignore
+// @ts-expect-error - Global fetch override for testing
 global.fetch = mockFetch;
 
 // Get the mocked functions from the global mocks

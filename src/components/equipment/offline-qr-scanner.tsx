@@ -73,7 +73,45 @@ export default function OfflineQRScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
+  // Utility function for iOS detection
+  const isIOSDevice = () => {
+    return typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  };
+
+  const isSafariOnIOS = () => {
+    return isIOSDevice() && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  };
+
   const { isOnline, getCachedEquipment } = useOfflineData();
+
+  // iOS-specific error message handler
+  const getIOSErrorMessage = (error: any) => {
+    if (!isIOSDevice()) {
+      return error.message || 'Camera error occurred';
+    }
+
+    switch (error.name) {
+      case 'NotAllowedError':
+        return 'Camera access denied. Go to Settings > Safari > Camera and allow access, then refresh this page.';
+      case 'NotFoundError':
+        return 'No camera found. Please ensure your device has a working camera.';
+      case 'NotSupportedError':
+        return 'Camera not supported. Please use Safari browser on iOS 11 or later.';
+      case 'NotReadableError':
+        return 'Camera is being used by another app. Please close other camera apps and try again.';
+      case 'OverconstrainedError':
+        return 'Camera constraints not supported. Please try again.';
+      case 'SecurityError':
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+          return 'Camera requires HTTPS on iOS. Please access this page with https://';
+        }
+        return 'Camera access blocked for security reasons.';
+      case 'AbortError':
+        return 'Camera access was interrupted. Please try again.';
+      default:
+        return `Camera error: ${error.message || 'Please check camera permissions and try again.'}`;
+    }
+  };
 
   // Clean up video stream when component unmounts or dialog closes
   useEffect(() => {
@@ -146,11 +184,57 @@ export default function OfflineQRScanner({
         return;
       }
 
+      // Enhanced browser detection for iOS Safari
+      const isIOS = isIOSDevice();
+      const isIOSSafari = isSafariOnIOS();
+
+      // Development mode logging for iOS debugging
+      if (process.env.NODE_ENV === 'development' && isIOS) {
+        console.log('iOS Safari detected:', {
+          userAgent: navigator.userAgent,
+          protocol: window.location.protocol,
+          hostname: window.location.hostname,
+          hasGetUserMedia: !!navigator.mediaDevices?.getUserMedia,
+          isIOSSafari
+        });
+      }
+
+      // iOS Safari requires HTTPS (except for localhost)
+      if (isIOS) {
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+          setError('Camera requires HTTPS on iOS devices. Please access this page with https://');
+          setIsScanning(false);
+          setScanning(false);
+          return;
+        }
+      }
+
+      // Check for camera API support with iOS-specific messaging
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setError('Camera not supported by this browser');
+        const errorMsg = isIOS 
+          ? 'Camera API not available. Please ensure you\'re using Safari 11+ on iOS 11+.'
+          : 'Camera not supported by this browser';
+        setError(errorMsg);
         setIsScanning(false);
         setScanning(false);
         return;
+      }
+
+      // Test camera access for iOS Safari (more explicit permission handling)
+      if (isIOS) {
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' }
+          });
+          // Clean up test stream immediately
+          testStream.getTracks().forEach(track => track.stop());
+        } catch (testError: any) {
+          const iosErrorMsg = getIOSErrorMessage(testError);
+          setError(iosErrorMsg);
+          setIsScanning(false);
+          setScanning(false);
+          return;
+        }
       }
       
       // Wait for the video element to be rendered
@@ -165,6 +249,27 @@ export default function OfflineQRScanner({
       
       codeReaderRef.current = new BrowserMultiFormatReader();
       
+      // iOS-specific camera constraints
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Use back camera
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      // iOS Safari specific adjustments
+      if (isIOS) {
+        constraints.video = {
+          ...constraints.video,
+          aspectRatio: 1.777777778, // 16:9 ratio works best on iOS
+          frameRate: { ideal: 30, max: 30 }, // Limit frame rate for better performance
+          // Add iOS-specific constraints for better compatibility
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 }
+        };
+      }
+
       await codeReaderRef.current.decodeFromVideoDevice(
         undefined,
         videoRef.current,
@@ -208,16 +313,22 @@ export default function OfflineQRScanner({
       );
     } catch (error) {
       console.error('Error starting scanner:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
-      if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
-        setError('Camera permission denied. Please allow camera access and try again.');
-      } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('DevicesNotFoundError')) {
-        setError('No camera found. Please connect a camera and try again.');
-      } else if (errorMessage.includes('NotSupportedError')) {
-        setError('Camera not supported by this browser.');
+      // Use iOS-specific error handling or fallback to general handling
+      if (isIOSDevice()) {
+        setError(getIOSErrorMessage(error));
       } else {
-        setError('Failed to start camera. Please check permissions and try again.');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+          setError('Camera permission denied. Please allow camera access and try again.');
+        } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('DevicesNotFoundError')) {
+          setError('No camera found. Please connect a camera and try again.');
+        } else if (errorMessage.includes('NotSupportedError')) {
+          setError('Camera not supported by this browser.');
+        } else {
+          setError('Failed to start camera. Please check permissions and try again.');
+        }
       }
       
       setIsScanning(false);
@@ -227,7 +338,26 @@ export default function OfflineQRScanner({
 
   const stopScanning = () => {
     if (codeReaderRef.current) {
-      codeReaderRef.current.reset();
+      // Stop all video streams
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+      
+      // Clear the video element
+      if (videoRef.current) {
+        videoRef.current.src = '';
+        videoRef.current.load();
+      }
+      
+      // Release the decoder
+      try {
+        codeReaderRef.current.stopContinuousDecode();
+      } catch (e) {
+        // Silently handle if already stopped
+      }
+      
       codeReaderRef.current = null;
     }
     setIsScanning(false);
@@ -297,6 +427,7 @@ export default function OfflineQRScanner({
                     autoPlay
                     playsInline
                     muted
+                    style={{ WebkitPlaysinline: true } as any}
                   />
                 )}
                 
@@ -329,6 +460,14 @@ export default function OfflineQRScanner({
                 <p className="text-sm text-gray-600">
                   {scanning ? 'Scanning for QR codes...' : 'Position QR code within the frame'}
                 </p>
+                
+                {/* iOS-specific instructions */}
+                {isIOSDevice() && !scanning && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    iOS: Make sure camera permission is enabled in Safari settings
+                  </p>
+                )}
+                
                 {!isOnline && (
                   <p className="text-xs text-orange-600 mt-1">
                     Offline mode: Only cached equipment can be found
@@ -458,6 +597,24 @@ export default function OfflineQRScanner({
               {scanResult ? 'Done' : 'Cancel'}
             </Button>
           </div>
+
+          {/* iOS Help Info */}
+          {isIOSDevice() && !isScanning && !scanResult && (
+            <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <Camera className="h-3 w-3 mt-0.5 text-blue-500" />
+                <div>
+                  <p className="font-medium text-blue-700">iOS Camera Tips</p>
+                  <ul className="text-blue-600 space-y-1 mt-1">
+                    <li>• Camera permission required in Safari settings</li>
+                    <li>• Must use HTTPS (not HTTP) for camera access</li>
+                    <li>• Close other camera apps if experiencing issues</li>
+                    <li>• Refresh page if camera fails to load</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Offline Info */}
           {!isOnline && (

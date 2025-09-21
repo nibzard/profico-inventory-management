@@ -37,9 +37,10 @@ interface EquipmentDetailPageProps {
 export default async function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
   const session = await auth();
   
-  // If no session, redirect to signin with callback URL
+  // If no session, the middleware should have handled the redirect
+  // This is just a safety check - the real protection is in middleware
   if (!session?.user) {
-    redirect("/auth/signin");
+    redirect("/dashboard");
   }
 
   const { id } = await params;

@@ -401,6 +401,58 @@ export const securityValidation = {
   },
 };
 
+// Subscription-related schemas
+export const subscriptionSchemas = {
+  create: z.object({
+    softwareName: z.string().min(2, "Software name must be at least 2 characters").max(100, "Software name too long"),
+    assignedUserId: commonSchemas.cuid,
+    assignedUserEmail: commonSchemas.email,
+    price: z.number().min(0, "Price must be non-negative"),
+    billingFrequency: z.enum(['monthly', 'yearly'], {
+      errorMap: () => ({ message: "Billing frequency must be 'monthly' or 'yearly'" })
+    }),
+    paymentMethod: z.enum(['company_card', 'personal_card'], {
+      errorMap: () => ({ message: "Payment method must be 'company_card' or 'personal_card'" })
+    }),
+    invoiceRecipient: commonSchemas.email,
+    isReimbursement: z.boolean().default(false),
+    isActive: z.boolean().default(true),
+    renewalDate: z.date(),
+    vendor: z.string().max(100, "Vendor name too long").optional(),
+    licenseKey: z.string().max(200, "License key too long").optional(),
+    notes: z.string().max(2000, "Notes too long").optional(),
+  }),
+
+  update: z.object({
+    softwareName: z.string().min(2, "Software name must be at least 2 characters").max(100, "Software name too long").optional(),
+    assignedUserId: commonSchemas.cuid.optional(),
+    assignedUserEmail: commonSchemas.email.optional(),
+    price: z.number().min(0, "Price must be non-negative").optional(),
+    billingFrequency: z.enum(['monthly', 'yearly']).optional(),
+    paymentMethod: z.enum(['company_card', 'personal_card']).optional(),
+    invoiceRecipient: commonSchemas.email.optional(),
+    isReimbursement: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    renewalDate: z.date().optional(),
+    vendor: z.string().max(100, "Vendor name too long").optional(),
+    licenseKey: z.string().max(200, "License key too long").optional(),
+    notes: z.string().max(2000, "Notes too long").optional(),
+  }),
+
+  search: z.object({
+    search: z.string().max(200, "Search term too long").optional(),
+    softwareName: z.string().max(100).optional(),
+    vendor: z.string().max(100).optional(),
+    assignedUserId: commonSchemas.cuid.optional(),
+    billingFrequency: z.enum(['monthly', 'yearly']).optional(),
+    paymentMethod: z.enum(['company_card', 'personal_card']).optional(),
+    isActive: z.boolean().optional(),
+    isReimbursement: z.boolean().optional(),
+    renewalDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
+    renewalDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
+  }),
+};
+
 // Equipment schema for forms
 export const equipmentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name too long"),

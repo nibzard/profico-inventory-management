@@ -28,7 +28,7 @@ interface SearchParams {
 export default async function EquipmentPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
 
@@ -37,36 +37,47 @@ export default async function EquipmentPage({
   }
 
   const { user } = session;
-  const currentPage = parseInt(searchParams.page || "1");
+  const resolvedSearchParams = await searchParams;
+  const currentPage = parseInt(resolvedSearchParams.page || "1");
   const pageSize = 12;
 
   // Build filters
   const filters: Record<string, unknown> = {};
 
-  if (searchParams.search) {
+  if (resolvedSearchParams.search) {
     filters.OR = [
-      { name: { contains: searchParams.search, mode: "insensitive" } },
-      { serialNumber: { contains: searchParams.search, mode: "insensitive" } },
-      { brand: { contains: searchParams.search, mode: "insensitive" } },
-      { model: { contains: searchParams.search, mode: "insensitive" } },
+      { name: { contains: resolvedSearchParams.search } },
+      { serialNumber: { contains: resolvedSearchParams.search } },
+      { brand: { contains: resolvedSearchParams.search } },
+      { model: { contains: resolvedSearchParams.search } },
     ];
   }
 
-  if (searchParams.category) {
-    filters.category = searchParams.category;
+  if (resolvedSearchParams.category) {
+    filters.category = resolvedSearchParams.category;
   }
 
-  if (searchParams.status) {
-    filters.status = searchParams.status;
+  if (resolvedSearchParams.status) {
+    filters.status = resolvedSearchParams.status;
   }
 
-  if (searchParams.owner) {
-    filters.currentOwnerId = searchParams.owner;
+  if (resolvedSearchParams.owner) {
+    filters.currentOwnerId = resolvedSearchParams.owner;
   }
 
   // For regular users, only show their own equipment or available equipment
   if (user.role === "user") {
-    filters.OR = [{ currentOwnerId: user.id }, { status: "available" }];
+    const userFilters = [{ currentOwnerId: user.id }, { status: "available" }];
+    if (filters.OR) {
+      // If there's already an OR clause (from search), combine with user restrictions
+      filters.AND = [
+        { OR: filters.OR },
+        { OR: userFilters }
+      ];
+      delete filters.OR;
+    } else {
+      filters.OR = userFilters;
+    }
   }
 
   // Fetch equipment with pagination
@@ -196,7 +207,7 @@ export default async function EquipmentPage({
         <EquipmentFilters
           categories={categories.map((c) => c.category)}
           users={users}
-          currentFilters={searchParams}
+          currentFilters={resolvedSearchParams}
           userRole={user.role}
         />
 

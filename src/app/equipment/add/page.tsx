@@ -3,9 +3,9 @@
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { EquipmentForm } from "@/components/forms/equipment-form";
+import { EquipmentFormWrapper } from "@/components/equipment/equipment-form-wrapper";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ImageIcon } from "lucide-react";
 import Link from "next/link";
 
 export default async function AddEquipmentPage() {
@@ -43,13 +43,30 @@ export default async function AddEquipmentPage() {
             <CardTitle>Equipment Details</CardTitle>
             <CardDescription>
               Fill in the equipment information below. Fields marked with * are required.
+              You can add photos after saving the equipment.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EquipmentForm
-              onSuccess={() => redirect("/equipment")}
-              onCancel={() => redirect("/equipment")}
-            />
+            <EquipmentFormWrapper />
+          </CardContent>
+        </Card>
+
+        {/* Photo Upload Note */}
+        <Card className="border-dashed border-gray-300">
+          <CardContent className="text-center py-8">
+            <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Add Photos After Saving
+            </h3>
+            <p className="text-gray-500 max-w-md mx-auto mb-4">
+              Save the equipment details first, then you'll be able to upload photos 
+              to help with identification, maintenance, and audits.
+            </p>
+            <div className="text-sm text-gray-400 space-y-1">
+              <p>• Take clear photos from multiple angles</p>
+              <p>• Include serial numbers and model labels</p>
+              <p>• Capture any damage or distinctive features</p>
+            </div>
           </CardContent>
         </Card>
       </div>

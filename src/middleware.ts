@@ -1,12 +1,22 @@
 // ABOUTME: NextAuth.js middleware for route protection and authentication
 // ABOUTME: Handles session validation and redirects for protected routes
+// ABOUTME: Includes development bypass when DEVELOPMENT=true
 
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import { isDevelopmentBypassEnabled, getDevelopmentSession } from "@/lib/dev-auth";
 
-export default auth((req) => {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const session = req.auth;
+  
+  // Get session from NextAuth or use development bypass
+  let session;
+  if (isDevelopmentBypassEnabled()) {
+    session = getDevelopmentSession();
+    console.log("🚀 Development mode: Using mock session in middleware");
+  } else {
+    session = await auth();
+  }
 
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/auth/signin", "/auth/signup"];
@@ -27,8 +37,9 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/auth/signin", req.url));
   }
 
-  // If authenticated and trying to access auth pages
-  if (session && pathname.startsWith("/auth")) {
+  // If authenticated and trying to access auth pages, redirect to dashboard
+  // Exception: in development mode, allow access to auth pages for testing
+  if (session && pathname.startsWith("/auth") && !isDevelopmentBypassEnabled()) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
@@ -52,7 +63,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [

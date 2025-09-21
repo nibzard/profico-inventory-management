@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "react-hot-toast";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
+import OfflineStatus from "@/components/offline-status";
+import PWAProvider from "@/components/pwa-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -43,20 +45,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProvider>
-          {children}
-          <PWAInstallPrompt />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: "#363636",
-                color: "#fff",
-              },
-            }}
-          />
-        </SessionProvider>
+        <PWAProvider>
+          <SessionProvider>
+            {children}
+            <PWAInstallPrompt />
+            <div className="fixed bottom-4 left-4 z-50">
+              <OfflineStatus />
+            </div>
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: "#363636",
+                  color: "#fff",
+                },
+              }}
+            />
+          </SessionProvider>
+        </PWAProvider>
       </body>
     </html>
   );

@@ -60,9 +60,7 @@ export default async function RequestDetailPage({ params }: PageProps) {
           team: {
             select: {
               name: true,
-              leader: {
-                select: { name: true, email: true }
-              }
+              leaderId: true
             }
           }
         },

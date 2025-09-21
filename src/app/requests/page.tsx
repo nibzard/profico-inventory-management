@@ -25,7 +25,7 @@ interface SearchParams {
 export default async function RequestsPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
 
@@ -34,7 +34,8 @@ export default async function RequestsPage({
   }
 
   const { user } = session;
-  const currentPage = parseInt(searchParams.page || "1");
+  const resolvedSearchParams = await searchParams;
+  const currentPage = parseInt(resolvedSearchParams.page || "1");
   const pageSize = 10;
 
   // Build filters based on user role
@@ -48,8 +49,8 @@ export default async function RequestsPage({
     whereClause = {};
   }
 
-  if (searchParams.status) {
-    whereClause.status = searchParams.status;
+  if (resolvedSearchParams.status) {
+    whereClause.status = resolvedSearchParams.status;
   }
 
   // Fetch requests with pagination
@@ -218,28 +219,28 @@ export default async function RequestsPage({
         <div className="flex space-x-2">
           <Button
             asChild
-            variant={!searchParams.status ? "default" : "outline"}
+            variant={!resolvedSearchParams.status ? "default" : "outline"}
             size="sm"
           >
             <Link href="/requests">All</Link>
           </Button>
           <Button
             asChild
-            variant={searchParams.status === "pending" ? "default" : "outline"}
+            variant={resolvedSearchParams.status === "pending" ? "default" : "outline"}
             size="sm"
           >
             <Link href="/requests?status=pending">Pending</Link>
           </Button>
           <Button
             asChild
-            variant={searchParams.status === "approved" ? "default" : "outline"}
+            variant={resolvedSearchParams.status === "approved" ? "default" : "outline"}
             size="sm"
           >
             <Link href="/requests?status=approved">Approved</Link>
           </Button>
           <Button
             asChild
-            variant={searchParams.status === "rejected" ? "default" : "outline"}
+            variant={resolvedSearchParams.status === "rejected" ? "default" : "outline"}
             size="sm"
           >
             <Link href="/requests?status=rejected">Rejected</Link>

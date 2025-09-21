@@ -3,6 +3,11 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
+  fallbacks: {
+    document: '/offline',
+  },
+  sw: 'sw.js',
+  customWorkerDir: 'worker',
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
@@ -43,7 +48,7 @@ const withPWA = require('next-pwa')({
       options: {
         cacheName: 'static-image-assets',
         expiration: {
-          maxEntries: 64,
+          maxEntries: 100,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
         },
       },
@@ -70,18 +75,62 @@ const withPWA = require('next-pwa')({
         },
       },
     },
+    // Equipment data API - Cache first for offline availability
+    {
+      urlPattern: /\/api\/equipment$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'equipment-list',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60, // 1 hour
+        },
+        networkTimeoutSeconds: 10,
+        cacheKeyWillBeUsed: async ({ request }) => {
+          return `${request.url}-${Date.now() - (Date.now() % (60 * 60 * 1000))}`;
+        },
+      },
+    },
+    // Individual equipment details - Cache for offline viewing
+    {
+      urlPattern: /\/api\/equipment\/[^\/]+$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'equipment-details',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 30 * 60, // 30 minutes
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    // User data for offline functionality
+    {
+      urlPattern: /\/api\/users$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'user-data',
+        expiration: {
+          maxEntries: 5,
+          maxAgeSeconds: 60 * 60, // 1 hour
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    // Generic API calls - Network first with offline fallback
     {
       urlPattern: /\/api\/.*$/i,
       handler: 'NetworkFirst',
       options: {
         cacheName: 'api-calls',
         expiration: {
-          maxEntries: 16,
+          maxEntries: 32,
           maxAgeSeconds: 10 * 60, // 10 minutes
         },
-        networkTimeoutSeconds: 15, // fallback to cache if network doesn't respond within 15 seconds
+        networkTimeoutSeconds: 15,
       },
     },
+    // HTML pages - Network first with offline fallback
     {
       urlPattern: /.*/i,
       handler: 'NetworkFirst',
@@ -91,7 +140,7 @@ const withPWA = require('next-pwa')({
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
         },
-        networkTimeoutSeconds: 15, // fallback to cache if network doesn't respond within 15 seconds
+        networkTimeoutSeconds: 15,
       },
     },
   ],

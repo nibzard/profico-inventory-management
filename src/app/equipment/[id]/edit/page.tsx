@@ -4,16 +4,18 @@
 import { auth } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/prisma";
-import { EquipmentForm } from "@/components/forms/equipment-form";
+import { EquipmentFormWrapper } from "@/components/equipment/equipment-form-wrapper";
+import { EquipmentPhotos } from "@/components/equipment/equipment-photos";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 interface EquipmentEditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EquipmentEditPage({ params }: EquipmentEditPageProps) {
+  const { id } = await params;
   const session = await auth();
 
   if (!session) {
@@ -25,7 +27,7 @@ export default async function EquipmentEditPage({ params }: EquipmentEditPagePro
   }
 
   const equipment = await db.equipment.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!equipment) {
@@ -50,22 +52,28 @@ export default async function EquipmentEditPage({ params }: EquipmentEditPagePro
           </div>
         </div>
 
-        {/* Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Equipment Details</CardTitle>
-            <CardDescription>
-              Update the equipment information below. Fields marked with * are required.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EquipmentForm
-              equipment={equipment}
-              onSuccess={() => redirect(`/equipment/${equipment.id}`)}
-              onCancel={() => redirect(`/equipment/${equipment.id}`)}
-            />
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {/* Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Equipment Details</CardTitle>
+              <CardDescription>
+                Update the equipment information below. Fields marked with * are required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EquipmentFormWrapper equipment={equipment} />
+            </CardContent>
+          </Card>
+
+          {/* Photo Management */}
+          <EquipmentPhotos
+            equipmentId={equipment.id}
+            equipmentName={equipment.name}
+            canUpload={true}
+            canDelete={true}
+          />
+        </div>
       </div>
     </div>
   );

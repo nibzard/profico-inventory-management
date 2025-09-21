@@ -5,6 +5,31 @@ import { prisma } from "@/lib/prisma";
 const f = createUploadthing();
 
 export const ourFileRouter = {
+  equipmentPhotos: f({ image: { maxFileSize: "8MB", maxFileCount: 10 } })
+    .middleware(async ({ req }) => {
+      const session = await auth();
+
+      if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+      }
+
+      return { userId: session.user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      const uploadedFile = await prisma.file.create({
+        data: {
+          name: file.name,
+          url: file.url,
+          size: file.size,
+          type: file.type,
+          description: `Equipment photo - ${file.name}`,
+          uploadedById: metadata.userId,
+        },
+      });
+
+      return { fileId: uploadedFile.id, url: file.url, name: file.name };
+    }),
+
   equipmentImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async ({ req }) => {
       const session = await auth();

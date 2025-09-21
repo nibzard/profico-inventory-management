@@ -3,8 +3,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { auth } from "@/lib/auth";
+import { useState, useEffect, use, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { notFound, useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,31 +31,32 @@ import { EquipmentUnassignDialog } from "@/components/equipment/equipment-unassi
 import { EquipmentStatusDialog } from "@/components/equipment/equipment-status-dialog";
 import { EquipmentHistoryComponent } from "@/components/equipment/equipment-history";
 import { EquipmentCategoriesTags } from "@/components/equipment/equipment-categories-tags";
+import { EquipmentPhotos } from "@/components/equipment/equipment-photos";
 
 interface EquipmentDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
+  const { id } = use(params);
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const { data: session, status } = useSession();
   const [equipment, setEquipment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
-  // Fetch session and equipment data
+  // Fetch equipment data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const sessionData = await auth();
-        setSession(sessionData);
-
-        if (!sessionData) {
+        if (status === "loading") return; // Wait for session to load
+        
+        if (!session) {
           window.location.href = "/auth/signin";
           return;
         }
 
-        const equipmentResponse = await fetch(`/api/equipment/${params.id}`);
+        const equipmentResponse = await fetch(`/api/equipment/${id}`);
         if (equipmentResponse.ok) {
           const equipmentData = await equipmentResponse.json();
           setEquipment(equipmentData);
@@ -70,7 +71,7 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
     };
 
     fetchData();
-  }, [params.id]);
+  }, [id, session, status]);
 
   if (loading || !equipment) {
     return (
@@ -88,6 +89,17 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
   const canEdit = session && session.user && (session.user.role === "admin" || session.user.role === "team_lead");
   const canAssign = canEdit && equipment.status === "available";
   const canUnassign = canEdit && equipment.status === "assigned";
+
+  // Callback for refreshing equipment data
+  const handleStatusChangeSuccess = useCallback(async () => {
+    if (equipment?.id) {
+      const response = await fetch(`/api/equipment/${equipment.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEquipment(data);
+      }
+    }
+  }, [equipment?.id]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -206,6 +218,14 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
                 </div>
               </CardContent>
             </Card>
+
+            {/* Equipment Photos */}
+            <EquipmentPhotos
+              equipmentId={equipment.id}
+              equipmentName={equipment.name}
+              canUpload={canEdit}
+              canDelete={canEdit}
+            />
 
             {/* Maintenance Records */}
             <Card>
@@ -439,17 +459,7 @@ export default function EquipmentDetailPage({ params }: EquipmentDetailPageProps
           equipment={equipment}
           open={statusDialogOpen}
           onOpenChange={setStatusDialogOpen}
-          onSuccess={() => {
-            // Refresh equipment data after status change
-            const fetchEquipment = async () => {
-              const response = await fetch(`/api/equipment/${equipment.id}`);
-              if (response.ok) {
-                const data = await response.json();
-                setEquipment(data);
-              }
-            };
-            fetchEquipment();
-          }}
+          onSuccess={handleStatusChangeSuccess}
         />
       )}
     </div>

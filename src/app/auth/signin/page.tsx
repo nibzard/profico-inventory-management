@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { DevLoginButton } from "@/components/auth/dev-login-button";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -100,6 +101,9 @@ export default function SignInPage() {
               </div>
             </>
           )}
+          
+          {/* Development login button - only shows when DEVELOPMENT=true */}
+          <DevLoginButton />
         </CardContent>
       </Card>
     </div>

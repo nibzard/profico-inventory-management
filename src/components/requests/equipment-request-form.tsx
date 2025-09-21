@@ -1,13 +1,25 @@
 // ABOUTME: Equipment request form component with validation and submission
-// ABOUTME: Handles new equipment requests with priority and justification fields
+// ABOUTME: Handles new equipment requests with priority and justification fields using React Hook Form and Zod validation
 
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { requestSchemas } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -64,64 +76,30 @@ const priorityLevels = [
 export function EquipmentRequestForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    equipmentType: "",
-    justification: "",
-    priority: "medium",
-    specificRequirements: "",
-    budget: "",
-    neededBy: "",
+
+  type RequestFormData = z.infer<typeof requestSchemas.create>;
+
+  const form = useForm<RequestFormData>({
+    resolver: zodResolver(requestSchemas.create),
+    defaultValues: {
+      equipmentType: "",
+      justification: "",
+      priority: "medium",
+      specificRequirements: "",
+      budget: undefined,
+      neededBy: undefined,
+    },
   });
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validation
-    if (!formData.equipmentType.trim()) {
-      toast.error("Please specify the equipment type");
-      return;
-    }
-
-    if (
-      !formData.justification.trim() ||
-      formData.justification.trim().length < 20
-    ) {
-      toast.error(
-        "Please provide a detailed justification (at least 20 characters)"
-      );
-      return;
-    }
-
-    // Validate budget if provided
-    if (formData.budget && !/^\d+(\.\d{1,2})?$/.test(formData.budget)) {
-      toast.error("Please enter a valid budget amount");
-      return;
-    }
-
+  const onSubmit = async (data: RequestFormData) => {
     setIsLoading(true);
-
     try {
       const response = await fetch("/api/requests", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          equipmentType: formData.equipmentType.trim(),
-          justification: formData.justification.trim(),
-          priority: formData.priority,
-          specificRequirements:
-            formData.specificRequirements.trim() || undefined,
-          budget: formData.budget ? parseFloat(formData.budget) : undefined,
-          neededBy: formData.neededBy || undefined,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -143,23 +121,31 @@ export function EquipmentRequestForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Label htmlFor="equipmentType">Equipment Type *</Label>
-        <Input
-          id="equipmentType"
-          placeholder="e.g., MacBook Pro 14-inch, iPhone 15, Dell Monitor"
-          value={formData.equipmentType}
-          onChange={(e) => handleInputChange("equipmentType", e.target.value)}
-          required
-          className="mt-1"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Equipment Type */}
+        <FormField
+          control={form.control}
+          name="equipmentType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Equipment Type *</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="e.g., MacBook Pro 14-inch, iPhone 15, Dell Monitor"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Be specific about the type and model if known
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        <p className="text-xs text-gray-600 mt-1">
-          Be specific about the type and model if known
-        </p>
         
         {/* Equipment Examples */}
-        <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+        <div className="p-3 bg-gray-50 rounded-lg">
           <p className="text-xs font-medium text-gray-700 mb-1">Common Examples:</p>
           <div className="space-y-1">
             {equipmentExamples.slice(0, 3).map((example) => (
@@ -169,118 +155,154 @@ export function EquipmentRequestForm() {
             ))}
           </div>
         </div>
-      </div>
 
-      <div>
-        <Label htmlFor="priority">Priority Level</Label>
-        <Select
-          value={formData.priority}
-          onValueChange={(value) => handleInputChange("priority", value)}
-        >
-          <SelectTrigger className="mt-1">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {priorityLevels.map((priority) => (
-              <SelectItem key={priority.value} value={priority.value}>
-                <div className="flex flex-col">
-                  <span>{priority.label}</span>
-                  <span className="text-xs text-gray-500">
-                    {priority.description}
-                  </span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="justification">Business Justification *</Label>
-        <Textarea
-          id="justification"
-          placeholder="Explain why you need this equipment, how it will be used, and how it relates to your work responsibilities..."
-          value={formData.justification}
-          onChange={(e) => handleInputChange("justification", e.target.value)}
-          required
-          rows={4}
-          className="mt-1"
+        {/* Priority Level */}
+        <FormField
+          control={form.control}
+          name="priority"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority Level</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {priorityLevels.map((priority) => (
+                    <SelectItem key={priority.value} value={priority.value}>
+                      <div className="flex flex-col">
+                        <span>{priority.label}</span>
+                        <span className="text-xs text-gray-500">
+                          {priority.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        <p className="text-xs text-gray-600 mt-1">
-          Minimum 20 characters. The more detail you provide, the faster the
-          approval process.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="budget">Budget (€) (Optional)</Label>
-          <Input
-            id="budget"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="e.g., 1500.00"
-            value={formData.budget}
-            onChange={(e) => handleInputChange("budget", e.target.value)}
-            className="mt-1"
+        {/* Business Justification */}
+        <FormField
+          control={form.control}
+          name="justification"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Business Justification *</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Explain why you need this equipment, how it will be used, and how it relates to your work responsibilities..."
+                  className="resize-none"
+                  rows={4}
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Minimum 20 characters. The more detail you provide, the faster the approval process.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Budget and Needed By */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="budget"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Budget (€) (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g., 1500.00"
+                    {...field}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Specify your budget limit if applicable
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          <p className="text-xs text-gray-600 mt-1">
-            Specify your budget limit if applicable
-          </p>
+
+          <FormField
+            control={form.control}
+            name="neededBy"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Needed By (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    {...field}
+                    value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  When do you need this equipment?
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
-        <div>
-          <Label htmlFor="neededBy">Needed By (Optional)</Label>
-          <Input
-            id="neededBy"
-            type="date"
-            value={formData.neededBy}
-            onChange={(e) => handleInputChange("neededBy", e.target.value)}
-            className="mt-1"
-          />
-          <p className="text-xs text-gray-600 mt-1">
-            When do you need this equipment?
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="specificRequirements">
-          Specific Requirements (Optional)
-        </Label>
-        <Textarea
-          id="specificRequirements"
-          placeholder="Any specific technical requirements, preferred brands, compatibility needs, etc."
-          value={formData.specificRequirements}
-          onChange={(e) =>
-            handleInputChange("specificRequirements", e.target.value)
-          }
-          rows={3}
-          className="mt-1"
+        {/* Specific Requirements */}
+        <FormField
+          control={form.control}
+          name="specificRequirements"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Specific Requirements (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Any specific technical requirements, preferred brands, compatibility needs, etc."
+                  className="resize-none"
+                  rows={3}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h4 className="font-medium text-yellow-800">Before Submitting</h4>
-        <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-          <li>
-            • Check if similar equipment is already available in the system
-          </li>
-          <li>• Ensure your request aligns with company equipment policies</li>
-          <li>• Consider if existing equipment can be reassigned instead</li>
-          <li>• For urgent requests, contact your team lead directly</li>
-        </ul>
-      </div>
+        {/* Guidelines */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="font-medium text-yellow-800">Before Submitting</h4>
+          <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+            <li>
+              • Check if similar equipment is already available in the system
+            </li>
+            <li>• Ensure your request aligns with company equipment policies</li>
+            <li>• Consider if existing equipment can be reassigned instead</li>
+            <li>• For urgent requests, contact your team lead directly</li>
+          </ul>
+        </div>
 
-      <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Submitting..." : "Submit Request"}
-        </Button>
-      </div>
-    </form>
+        {/* Actions */}
+        <div className="flex justify-end space-x-3">
+          <Button type="button" variant="outline" onClick={() => router.back()}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Submitting..." : "Submit Request"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

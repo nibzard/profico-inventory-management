@@ -261,6 +261,21 @@ export function EquipmentList({
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
+                {/* Equipment Photo Preview */}
+                {item.photos && JSON.parse(item.photos).length > 0 && (
+                  <div className="flex justify-center">
+                    <img
+                      src={JSON.parse(item.photos)[0].url}
+                      alt={`${item.name} preview`}
+                      className="w-20 h-20 object-cover rounded-lg border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+
                 {/* Category */}
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Category:</span>

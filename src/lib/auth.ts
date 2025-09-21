@@ -1,5 +1,6 @@
 // ABOUTME: NextAuth.js configuration for ProfiCo Inventory Management System
 // ABOUTME: Handles magic link authentication with role-based access control
+// ABOUTME: Includes development bypass mode when DEVELOPMENT=true
 
 import { NextAuthConfig } from "next-auth";
 import NextAuth from "next-auth";
@@ -7,6 +8,12 @@ import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { type UserRole } from "@/types/index";
+import { 
+  isDevelopmentBypassEnabled, 
+  getDevelopmentSession, 
+  ensureDevelopmentUser,
+  DEV_MOCK_USER 
+} from "./dev-auth";
 
 export const config = {
   adapter: PrismaAdapter(prisma),
@@ -18,6 +25,13 @@ export const config = {
   ],
   callbacks: {
     async signIn({ user, account, profile, email }) {
+      // Development bypass - always allow signin in development mode
+      if (isDevelopmentBypassEnabled()) {
+        console.log("🚀 Development mode: Bypassing authentication");
+        await ensureDevelopmentUser(prisma);
+        return true;
+      }
+
       // For magic link authentication, check if user exists
       if (account?.provider === "resend") {
         try {
@@ -46,6 +60,14 @@ export const config = {
       return true;
     },
     async jwt({ token, user }) {
+      // Development bypass - use mock user data
+      if (isDevelopmentBypassEnabled()) {
+        token.id = DEV_MOCK_USER.id;
+        token.role = DEV_MOCK_USER.role;
+        token.email = DEV_MOCK_USER.email;
+        return token;
+      }
+
       // Always fetch user data from database to ensure we have the latest role
       if (token.email) {
         const dbUser = await prisma.user.findUnique({
@@ -61,6 +83,20 @@ export const config = {
       return token;
     },
     async session({ session, token }) {
+      // Development bypass - return mock session
+      if (isDevelopmentBypassEnabled()) {
+        return {
+          user: {
+            id: DEV_MOCK_USER.id,
+            email: DEV_MOCK_USER.email,
+            name: DEV_MOCK_USER.name,
+            role: DEV_MOCK_USER.role,
+            image: DEV_MOCK_USER.image,
+          },
+          expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        };
+      }
+
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
@@ -76,4 +112,17 @@ export const config = {
   },
 } satisfies NextAuthConfig;
 
-export const { handlers, auth, signIn, signOut } = NextAuth(config);
+export const { handlers, auth: nextAuth, signIn, signOut } = NextAuth(config);
+
+// Custom auth function that handles development bypass
+export async function auth() {
+  // In development mode, return mock session if bypass is enabled
+  if (isDevelopmentBypassEnabled()) {
+    console.log("🚀 Development mode: Using mock admin session");
+    await ensureDevelopmentUser(prisma);
+    return getDevelopmentSession();
+  }
+  
+  // Otherwise use normal NextAuth
+  return await nextAuth();
+}

@@ -384,7 +384,7 @@ export function EquipmentForm({ equipment, onSuccess, onCancel }: EquipmentFormP
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>Image URL (Legacy)</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter image URL" {...field} />
                   </FormControl>

@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -21,9 +20,7 @@ import {
   CreditCard,
   Calendar,
   DollarSign,
-  Users,
   Mail,
-  Clock,
   CheckCircle,
   XCircle,
 } from "lucide-react";

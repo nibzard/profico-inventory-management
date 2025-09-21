@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Download, CreditCard, Calendar, Users } from "lucide-react";
+import { Plus, CreditCard, Calendar, Users } from "lucide-react";
 import Link from "next/link";
 
 interface SearchParams {
@@ -241,121 +241,131 @@ export default async function SubscriptionsPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
-              <input
-                type="text"
-                placeholder="Search subscriptions..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.search || ""}
-                name="search"
-              />
+          <form method="GET" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search</label>
+                <input
+                  type="text"
+                  placeholder="Search subscriptions..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.search || ""}
+                  name="search"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Vendor</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.vendor || ""}
+                  name="vendor"
+                >
+                  <option value="">All Vendors</option>
+                  {vendors.map((vendor) => (
+                    <option key={vendor.vendor || "unknown"} value={vendor.vendor || ""}>
+                      {vendor.vendor || "Unknown"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Billing Frequency</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.billingFrequency || ""}
+                  name="billingFrequency"
+                >
+                  <option value="">All Frequencies</option>
+                  {billingFrequencies.map((freq) => (
+                    <option key={freq.billingFrequency} value={freq.billingFrequency}>
+                      {freq.billingFrequency.charAt(0).toUpperCase() + freq.billingFrequency.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Payment Method</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.paymentMethod || ""}
+                  name="paymentMethod"
+                >
+                  <option value="">All Methods</option>
+                  {paymentMethods.map((method) => (
+                    <option key={method.paymentMethod} value={method.paymentMethod}>
+                      {method.paymentMethod === "company_card" ? "Company Card" : "Personal Card"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.isActive || ""}
+                  name="isActive"
+                >
+                  <option value="">All Status</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Reimbursement</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.isReimbursement || ""}
+                  name="isReimbursement"
+                >
+                  <option value="">All Types</option>
+                  <option value="true">Requires Reimbursement</option>
+                  <option value="false">No Reimbursement</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Renewal From</label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.renewalDateFrom || ""}
+                  name="renewalDateFrom"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Renewal To</label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  defaultValue={searchParams.renewalDateTo || ""}
+                  name="renewalDateTo"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Vendor</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.vendor || ""}
-                name="vendor"
+            <div className="flex justify-end space-x-4">
+              <Button 
+                variant="outline" 
+                type="button"
+                onClick={() => {
+                  const url = new URL(window.location.href);
+                  url.search = '';
+                  window.location.href = url.toString();
+                }}
               >
-                <option value="">All Vendors</option>
-                {vendors.map((vendor) => (
-                  <option key={vendor.vendor || "unknown"} value={vendor.vendor || ""}>
-                    {vendor.vendor || "Unknown"}
-                  </option>
-                ))}
-              </select>
+                Clear Filters
+              </Button>
+              <Button type="submit">
+                Apply Filters
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Billing Frequency</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.billingFrequency || ""}
-                name="billingFrequency"
-              >
-                <option value="">All Frequencies</option>
-                {billingFrequencies.map((freq) => (
-                  <option key={freq.billingFrequency} value={freq.billingFrequency}>
-                    {freq.billingFrequency.charAt(0).toUpperCase() + freq.billingFrequency.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Payment Method</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.paymentMethod || ""}
-                name="paymentMethod"
-              >
-                <option value="">All Methods</option>
-                {paymentMethods.map((method) => (
-                  <option key={method.paymentMethod} value={method.paymentMethod}>
-                    {method.paymentMethod === "company_card" ? "Company Card" : "Personal Card"}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.isActive || ""}
-                name="isActive"
-              >
-                <option value="">All Status</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Reimbursement</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.isReimbursement || ""}
-                name="isReimbursement"
-              >
-                <option value="">All Types</option>
-                <option value="true">Requires Reimbursement</option>
-                <option value="false">No Reimbursement</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Renewal From</label>
-              <input
-                type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.renewalDateFrom || ""}
-                name="renewalDateFrom"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Renewal To</label>
-              <input
-                type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={searchParams.renewalDateTo || ""}
-                name="renewalDateTo"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 flex justify-end space-x-4">
-            <Button variant="outline" type="reset">
-              Clear Filters
-            </Button>
-            <Button type="submit">
-              Apply Filters
-            </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
 

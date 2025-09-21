@@ -26,6 +26,7 @@ model User {
   // Relations
   team                   Team?              @relation(fields: [teamId], references: [id])
   ownedEquipment         Equipment[]        @relation("EquipmentOwner")
+  createdEquipment       Equipment[]        @relation("EquipmentCreator")
   equipmentRequests      EquipmentRequest[] @relation("RequesterRequests")
   approvedRequests       EquipmentRequest[] @relation("ApproverRequests")
   subscriptions          Subscription[]
@@ -37,6 +38,8 @@ model User {
   transferRequestsInitiated EquipmentTransferRequest[] @relation("EquipmentTransferRequestBy")
   transferRequestsApproved EquipmentTransferRequest[] @relation("EquipmentTransferRequestApproved")
   requestHistory          RequestHistory[] @relation("RequestHistoryUser")
+  processedInvoices      Invoice[]         @relation("processedInvoices")
+  activityLogs           ActivityLog[]
 
   // NextAuth.js relations
   accounts      Account[]
@@ -111,6 +114,8 @@ model Equipment {
   location          String?
   condition         String?
   notes             String?
+  invoiceId         String?
+  createdBy         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -123,6 +128,8 @@ model Equipment {
   maintenanceRecords MaintenanceRecord[]
   files            File[]
   transferRequests EquipmentTransferRequest[]
+  invoice          Invoice?             @relation(fields: [invoiceId], references: [id])
+  creator          User?                @relation("EquipmentCreator", fields: [createdBy], references: [id])
 
   @@map("equipment")
 }
@@ -290,6 +297,43 @@ model File {
   uploadedBy   User      @relation(fields: [uploadedById], references: [id])
 
   @@map("files")
+}
+
+model Invoice {
+  id                String    @id @default(cuid())
+  vendor            String
+  invoiceNumber     String?
+  invoiceDate       DateTime?
+  amount            Float?
+  purchaseMethod    String    @default("Off-the-shelf") // "ProfiCo", "ZOPI", "Leasing", "Off-the-shelf"
+  depreciationPeriod Int      @default(24)
+  status            String    @default("draft") // "draft", "processed", "completed"
+  confidence        Float     @default(0)
+  rawText           String?
+  equipmentCount    Int       @default(0)
+  processedBy       String
+  validationErrors  String?   // JSON array of error messages
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  processedByUser   User       @relation("processedInvoices", fields: [processedBy], references: [id])
+  equipment         Equipment[]
+
+  @@map("invoices")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // "OCR_PROCESSING", "EQUIPMENT_CREATED", "INVOICE_PROCESSED", etc.
+  details   String?  // JSON string with additional context
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
 }
 
 model EquipmentTransferRequest {

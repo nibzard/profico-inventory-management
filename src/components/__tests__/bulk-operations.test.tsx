@@ -426,7 +426,7 @@ afterEach(() => {
 
       await waitFor(() => {
         expect(screen.queryByText("Processing...")).not.toBeInTheDocument();
-      }, 200);
+      }, { timeout: 200 });
     });
 
     it("should disable buttons during processing", async () => {

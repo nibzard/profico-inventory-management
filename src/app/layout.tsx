@@ -45,6 +45,7 @@ export default function RootLayout({
       >
         <SessionProvider>
           {children}
+          <PWAInstallPrompt />
           <Toaster
             position="top-right"
             toastOptions={{

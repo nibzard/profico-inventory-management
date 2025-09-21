@@ -47,6 +47,8 @@ interface EquipmentListProps {
   totalPages: number;
   userRole: string;
   userId: string;
+  selectedItems?: string[];
+  onSelectionChange?: (selected: string[]) => void;
 }
 
 export function EquipmentList({
@@ -54,12 +56,16 @@ export function EquipmentList({
   currentPage,
   totalPages,
   userRole,
+  selectedItems: externalSelectedItems,
+  onSelectionChange,
 }: EquipmentListProps) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] =
     useState<EquipmentWithOwner | null>(null);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  // Use external selection state if provided, otherwise use internal state
+  const [internalSelectedItems, setInternalSelectedItems] = useState<Set<string>>(new Set());
+  const selectedItems = externalSelectedItems ? new Set(externalSelectedItems) : internalSelectedItems;
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -112,14 +118,27 @@ export function EquipmentList({
     } else {
       newSelected.add(equipmentId);
     }
-    setSelectedItems(newSelected);
+    
+    const newSelectedArray = Array.from(newSelected);
+    
+    if (onSelectionChange) {
+      onSelectionChange(newSelectedArray);
+    } else {
+      setInternalSelectedItems(newSelected);
+    }
   };
 
   const handleSelectAll = () => {
-    if (selectedItems.size === equipment.length) {
-      setSelectedItems(new Set());
+    const newSelected = selectedItems.size === equipment.length ? 
+      new Set<string>() : 
+      new Set(equipment.map(item => item.id));
+    
+    const newSelectedArray = Array.from(newSelected);
+    
+    if (onSelectionChange) {
+      onSelectionChange(newSelectedArray);
     } else {
-      setSelectedItems(new Set(equipment.map(item => item.id)));
+      setInternalSelectedItems(newSelected);
     }
   };
 

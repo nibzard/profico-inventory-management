@@ -285,6 +285,8 @@ export default function EquipmentManagementPage() {
                   totalPages={1}
                   userRole={session.user.role}
                   userId={session.user.id}
+                  selectedItems={selectedEquipment}
+                  onSelectionChange={setSelectedEquipment}
                 />
               </CardContent>
             </Card>

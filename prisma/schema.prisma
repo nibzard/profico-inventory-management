@@ -32,6 +32,10 @@ model User {
   equipmentHistoryFrom   EquipmentHistory[] @relation("HistoryFromUser")
   equipmentHistoryTo     EquipmentHistory[] @relation("HistoryToUser")
   uploadedFiles          File[]
+  transferRequestsFrom   EquipmentTransferRequest[] @relation("EquipmentTransferRequestFrom")
+  transferRequestsTo     EquipmentTransferRequest[] @relation("EquipmentTransferRequestTo")
+  transferRequestsInitiated EquipmentTransferRequest[] @relation("EquipmentTransferRequestBy")
+  transferRequestsApproved EquipmentTransferRequest[] @relation("EquipmentTransferRequestApproved")
 
   // NextAuth.js relations
   accounts      Account[]
@@ -54,28 +58,31 @@ model Team {
 }
 
 model Equipment {
-  id             String    @id @default(cuid())
-  serialNumber   String    @unique
-  name           String
-  brand          String?
-  model          String?
-  category       String    // "computers", "mobile_devices", "peripherals", etc.
-  purchaseDate   DateTime
-  purchaseMethod String    // "company_card", "zopi", "leasing", "personal"
-  purchasePrice  Float?
-  currentOwnerId String?
-  status         String    @default("available") // "pending", "available", "assigned", etc.
-  specifications String?   // JSON string for flexible specs
-  warrantyInfo   String?
-  pins           String?   // For tablets/phones
-  photos         String?   // JSON array of photo URLs
-  invoiceUrl     String?
-  tags           String?   // JSON array of tags
-  location       String?
-  condition      String?
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  serialNumber      String    @unique
+  name              String
+  brand             String?
+  model             String?
+  category          String    // "computers", "mobile_devices", "peripherals", etc.
+  purchaseDate      DateTime
+  purchaseMethod    String    // "company_card", "zopi", "leasing", "personal"
+  purchasePrice     Float?
+  currentOwnerId    String?
+  status            String    @default("available") // "pending", "available", "assigned", etc.
+  specifications    String?   // JSON string for flexible specs
+  warrantyExpiry   DateTime?
+  warrantyInfo      String?
+  lastMaintenanceDate DateTime?
+  nextMaintenanceDate DateTime?
+  pins              String?   // For tablets/phones
+  photos            String?   // JSON array of photo URLs
+  invoiceUrl        String?
+  tags              String?   // JSON array of tags
+  location          String?
+  condition         String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
   currentOwner     User?                @relation("EquipmentOwner", fields: [currentOwnerId], references: [id])
@@ -83,24 +90,30 @@ model Equipment {
   history          EquipmentHistory[]
   maintenanceRecords MaintenanceRecord[]
   files            File[]
+  transferRequests EquipmentTransferRequest[]
 
   @@map("equipment")
 }
 
 model EquipmentRequest {
-  id               String    @id @default(cuid())
-  requesterId      String
-  equipmentId      String?
-  equipmentType    String    // What type of equipment is being requested
-  justification    String
-  status           String    @default("pending") // "pending", "approved", "rejected", "ordered", "fulfilled"
-  teamLeadApproval Boolean?
-  adminApproval    Boolean?
-  approverId       String?
-  rejectionReason  String?
-  priority         String    @default("medium") // "low", "medium", "high", "urgent"
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  requesterId           String
+  equipmentId           String?
+  equipmentType         String    // What type of equipment is being requested
+  justification         String
+  status                String    @default("pending") // "pending", "approved", "rejected", "ordered", "fulfilled"
+  teamLeadApproval      Boolean?
+  adminApproval         Boolean?
+  approverId            String?
+  rejectionReason       String?
+  priority              String    @default("medium") // "low", "medium", "high", "urgent"
+  neededBy              DateTime? // When the equipment is needed
+  budget                Float?    // Expected budget for the equipment
+  specificRequirements  String?   // Additional requirements or specifications
+  approvalNotes         String?   // Notes from the approver
+  statusNotes           String?   // Notes for status updates
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // Relations
   requester User       @relation("RequesterRequests", fields: [requesterId], references: [id])
@@ -132,7 +145,10 @@ model MaintenanceRecord {
   id          String    @id @default(cuid())
   equipmentId String
   description String
+  type        String    @default("corrective") // "preventive", "corrective", "emergency", "upgrade", "inspection"
+  date        DateTime
   cost        Float?
+  performedBy String?
   status      String    @default("pending") // "pending", "in_progress", "completed"
   scheduledAt DateTime?
   completedAt DateTime?
@@ -223,6 +239,30 @@ model File {
   uploadedBy   User      @relation(fields: [uploadedById], references: [id])
 
   @@map("files")
+}
+
+model EquipmentTransferRequest {
+  id               String   @id @default(cuid())
+  equipmentId      String
+  fromUserId       String?
+  toUserId         String
+  requestedById    String
+  approverId       String?
+  reason           String
+  notes            String?
+  condition        String?
+  status           String   @default("pending") // "pending", "approved", "rejected"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  equipment        Equipment @relation(fields: [equipmentId], references: [id])
+  fromUser         User?     @relation("EquipmentTransferRequestFrom", fields: [fromUserId], references: [id])
+  toUser           User      @relation("EquipmentTransferRequestTo", fields: [toUserId], references: [id])
+  requestedBy      User      @relation("EquipmentTransferRequestBy", fields: [requestedById], references: [id])
+  approver         User?     @relation("EquipmentTransferRequestApproved", fields: [approverId], references: [id])
+
+  @@map("equipment_transfer_requests")
 }
 
 // NextAuth.js required models

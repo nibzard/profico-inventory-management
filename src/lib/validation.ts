@@ -109,7 +109,7 @@ export const commonSchemas = {
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
 
   // Request status
-  requestStatus: z.enum(['pending', 'approved', 'rejected', 'cancelled']),
+  requestStatus: z.enum(['pending', 'approved', 'rejected', 'ordered', 'fulfilled']),
 
   // Purchase method validation
   purchaseMethod: z.enum(['profi_co', 'zopi', 'leasing', 'off_the_shelf']),
@@ -205,12 +205,17 @@ export const userSchemas = {
 export const requestSchemas = {
   create: z.object({
     equipmentType: z.string().min(2, "Equipment type must be at least 2 characters").max(100),
-    category: z.string().min(2, "Category required").max(50),
     justification: z.string().min(20, "Justification must be at least 20 characters").max(2000),
     priority: commonSchemas.priority,
     specificRequirements: z.string().max(1000).optional(),
-    budget: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid budget format").optional(),
-    neededBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional(),
+    budget: z.union([
+      z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid budget format").transform(Number),
+      z.number().positive("Budget must be positive")
+    ]).optional(),
+    neededBy: z.union([
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").transform(date => new Date(date)),
+      z.date()
+    ]).optional(),
   }),
 
   approve: z.object({
@@ -220,6 +225,11 @@ export const requestSchemas = {
 
   reject: z.object({
     reason: z.string().min(10, "Rejection reason must be at least 10 characters").max(1000),
+    notes: z.string().max(1000).optional(),
+  }),
+
+  updateStatus: z.object({
+    status: commonSchemas.requestStatus,
     notes: z.string().max(1000).optional(),
   }),
 };
@@ -390,5 +400,26 @@ export const securityValidation = {
     return true;
   },
 };
+
+// Equipment schema for forms
+export const equipmentSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name too long"),
+  brand: z.string().max(50, "Brand too long").optional(),
+  model: z.string().max(50, "Model too long").optional(),
+  serialNumber: z.string().min(1, "Serial number is required").max(100, "Serial number too long"),
+  category: z.string().min(2, "Category is required").max(50, "Category too long"),
+  status: commonSchemas.equipmentStatus.default("available"),
+  purchaseDate: z.date(),
+  purchasePrice: z.number().min(0, "Purchase price must be non-negative"),
+  currentValue: z.number().min(0, "Current value must be non-negative").optional(),
+  warrantyExpiry: z.date().optional().nullable(),
+  lastMaintenanceDate: z.date().optional().nullable(),
+  nextMaintenanceDate: z.date().optional().nullable(),
+  location: z.string().max(200, "Location too long").optional(),
+  description: z.string().max(1000, "Description too long").optional(),
+  notes: z.string().max(2000, "Notes too long").optional(),
+  imageUrl: commonSchemas.url.optional(),
+  teamId: commonSchemas.cuid.optional().nullable(),
+});
 
 // Export everything that's already been exported above

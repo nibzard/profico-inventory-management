@@ -6,6 +6,7 @@ import { db } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { requestSchemas, InputSanitizer, ValidationHelper } from "@/lib/validation";
 import { withSecurity } from "@/lib/security-middleware";
+import { EmailNotificationService, type EquipmentRequestEmailData } from "@/lib/email";
 
 interface AuthenticatedRequest extends NextRequest {
   user?: {
@@ -130,7 +131,35 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // TODO: Send notification email to team lead
+      // Send notification email to team leads
+      try {
+        const emailData: EquipmentRequestEmailData = {
+          id: equipmentRequest.id,
+          equipmentType: equipmentRequest.equipmentType,
+          justification: equipmentRequest.justification,
+          priority: equipmentRequest.priority,
+          neededBy: equipmentRequest.neededBy || undefined,
+          budget: equipmentRequest.budget || undefined,
+          specificRequirements: equipmentRequest.specificRequirements || undefined,
+          status: equipmentRequest.status,
+          requester: {
+            id: equipmentRequest.requester.id,
+            name: equipmentRequest.requester.name,
+            email: equipmentRequest.requester.email,
+            role: equipmentRequest.requester.role as any,
+          },
+          createdAt: equipmentRequest.createdAt,
+          updatedAt: equipmentRequest.updatedAt,
+        };
+
+        const teamLeadEmails = await EmailNotificationService.getTeamLeadEmails(user.id);
+        if (teamLeadEmails.length > 0) {
+          await EmailNotificationService.notifyTeamLeadOfNewRequest(emailData, teamLeadEmails);
+        }
+      } catch (emailError) {
+        console.error('Failed to send team lead notification:', emailError);
+        // Don't fail the request creation if email fails
+      }
 
       return NextResponse.json(
         {

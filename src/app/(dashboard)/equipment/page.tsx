@@ -31,8 +31,10 @@ export default async function EquipmentPage({
   searchParams: Promise<SearchParams>;
 }) {
   const session = await auth();
-
-  if (!session) {
+  
+  // If no session, the middleware should have already redirected to signin
+  // This is a fallback check only
+  if (!session?.user) {
     redirect("/auth/signin");
   }
 

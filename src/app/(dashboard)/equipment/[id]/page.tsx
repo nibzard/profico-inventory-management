@@ -81,6 +81,10 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
   }
 
   // Check if user has permission to view this equipment
+  // Regular users can only view:
+  // 1. Equipment assigned to them
+  // 2. Available equipment (to request)
+  // Admins and team leads can view all equipment
   if (user.role === "user" && equipment.currentOwnerId !== user.id && equipment.status !== "available") {
     redirect("/dashboard");
   }

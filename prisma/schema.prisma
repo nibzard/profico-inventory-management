@@ -102,6 +102,7 @@ model Equipment {
   purchaseDate      DateTime
   purchaseMethod    String    // "company_card", "zopi", "leasing", "personal"
   purchasePrice     Float?
+  currentValue      Float?
   currentOwnerId    String?
   status            String    @default("available") // "pending", "available", "assigned", etc.
   specifications    String?   // JSON string for flexible specs

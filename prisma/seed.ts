@@ -70,8 +70,10 @@ async function main() {
   });
 
   // Create sample equipment
-  const laptop1 = await prisma.equipment.create({
-    data: {
+  const laptop1 = await prisma.equipment.upsert({
+    where: { serialNumber: "PFC-LAPTOP-001" },
+    update: {},
+    create: {
       serialNumber: "PFC-LAPTOP-001",
       name: "MacBook Pro 16-inch",
       brand: "Apple",
@@ -98,8 +100,10 @@ async function main() {
     },
   });
 
-  await prisma.equipment.create({
-    data: {
+  await prisma.equipment.upsert({
+    where: { serialNumber: "PFC-LAPTOP-002" },
+    update: {},
+    create: {
       serialNumber: "PFC-LAPTOP-002",
       name: "Dell XPS 13",
       brand: "Dell",
@@ -124,8 +128,10 @@ async function main() {
     },
   });
 
-  const monitor = await prisma.equipment.create({
-    data: {
+  const monitor = await prisma.equipment.upsert({
+    where: { serialNumber: "PFC-MON-001" },
+    update: {},
+    create: {
       serialNumber: "PFC-MON-001",
       name: "LG UltraWide Monitor",
       brand: "LG",

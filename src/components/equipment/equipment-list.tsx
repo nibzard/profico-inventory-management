@@ -56,7 +56,8 @@ export function EquipmentList({
   currentPage,
   totalPages,
   userRole,
-  selectedItems: externalSelectedItems,
+  userId,
+  selectedItems,
   onSelectionChange,
 }: EquipmentListProps) {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -65,7 +66,8 @@ export function EquipmentList({
     useState<EquipmentWithOwner | null>(null);
   // Use external selection state if provided, otherwise use internal state
   const [internalSelectedItems, setInternalSelectedItems] = useState<Set<string>>(new Set());
-  const selectedItems = externalSelectedItems ? new Set(externalSelectedItems) : internalSelectedItems;
+  const currentSelectedItems = selectedItems ? new Set(Array.from(selectedItemsSet)) : internalSelectedItems;
+  const selectedItemsSet = currentSelectedItems; // For backward compatibility with existing code
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -112,7 +114,7 @@ export function EquipmentList({
   };
 
   const handleSelectItem = (equipmentId: string) => {
-    const newSelected = new Set(selectedItems);
+    const newSelected = new Set(Array.from(selectedItemsSet));
     if (newSelected.has(equipmentId)) {
       newSelected.delete(equipmentId);
     } else {
@@ -129,7 +131,7 @@ export function EquipmentList({
   };
 
   const handleSelectAll = () => {
-    const newSelected = selectedItems.size === equipment.length ? 
+    const newSelected = selectedItemsSet.size === equipment.length ? 
       new Set<string>() : 
       new Set(equipment.map(item => item.id));
     
@@ -163,15 +165,15 @@ export function EquipmentList({
           <div className="flex items-center space-x-3">
             <Checkbox
               id="select-all"
-              checked={selectedItems.size === equipment.length && equipment.length > 0}
+              checked={selectedItemsSet.size === equipment.length && equipment.length > 0}
               onCheckedChange={handleSelectAll}
             />
             <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
               Select All
             </label>
-            {selectedItems.size > 0 && (
+            {selectedItemsSet.size > 0 && (
               <Badge variant="secondary">
-                {selectedItems.size} selected
+                {selectedItemsSet.size} selected
               </Badge>
             )}
           </div>
@@ -181,12 +183,12 @@ export function EquipmentList({
       {/* Equipment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {equipment.map((item) => (
-          <Card key={item.id} className={`hover:shadow-lg transition-shadow ${selectedItems.has(item.id) ? 'ring-2 ring-blue-500' : ''}`}>
+          <Card key={item.id} className={`hover:shadow-lg transition-shadow ${selectedItemsSet.has(item.id) ? 'ring-2 ring-blue-500' : ''}`}>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex items-start space-x-2 flex-1">
                   <Checkbox
-                    checked={selectedItems.has(item.id)}
+                    checked={selectedItemsSet.has(item.id)}
                     onCheckedChange={() => handleSelectItem(item.id)}
                     className="mt-1"
                   />

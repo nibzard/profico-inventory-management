@@ -85,7 +85,11 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
   // 1. Equipment assigned to them
   // 2. Available equipment (to request)
   // Admins and team leads can view all equipment
-  if (user.role === "user" && equipment.currentOwnerId !== user.id && equipment.status !== "available") {
+  const isOwner = equipment.currentOwnerId === user.id;
+  const isAvailable = equipment.status === "available";
+  const isAdminOrLead = user.role === "admin" || user.role === "team_lead";
+  
+  if (user.role === "user" && !isOwner && !isAvailable) {
     redirect("/dashboard");
   }
 

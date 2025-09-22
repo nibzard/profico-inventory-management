@@ -143,7 +143,7 @@ export default async function EquipmentPage({
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" className="md:hidden">
                   <QrCode className="h-4 w-4 mr-2" />
                   Generate QR Codes
                 </Button>

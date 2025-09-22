@@ -13,7 +13,7 @@ interface PageProps {
 }
 
 interface EquipmentWithDetails extends Equipment {
-  assignedTo?: {
+  currentOwner?: {
     id: string;
     name: string;
     email: string;
@@ -79,7 +79,7 @@ export default async function AssignEquipmentPage({ params }: PageProps) {
           name: true,
           serialNumber: true,
           status: true,
-          assignedTo: {
+          currentOwner: {
             select: { id: true, name: true, email: true }
           }
         },
@@ -108,7 +108,7 @@ export default async function AssignEquipmentPage({ params }: PageProps) {
       // category: request.category
     },
     include: {
-      assignedTo: {
+      currentOwner: {
         select: { id: true, name: true, email: true }
       }
     },

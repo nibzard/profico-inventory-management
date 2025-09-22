@@ -30,7 +30,7 @@ import { Search, Package, User, Calendar, AlertTriangle } from "lucide-react";
 import type { Equipment, EquipmentRequest } from "@prisma/client";
 
 interface EquipmentWithDetails extends Equipment {
-  assignedTo?: {
+  currentOwner?: {
     id: string;
     name: string;
     email: string;

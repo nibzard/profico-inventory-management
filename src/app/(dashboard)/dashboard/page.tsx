@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/prisma";
+import { dashboardCache } from "@/lib/cache";
 import {
   Card,
   CardContent,
@@ -104,21 +105,38 @@ export default async function DashboardPage() {
       db.user.count({ where: { isActive: true } }),
       db.equipment.findMany({
         where: { updatedAt: { gte: weekAgo } },
-        include: { currentOwner: { select: { name: true } } },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          updatedAt: true,
+          currentOwner: { select: { name: true } }
+        },
         orderBy: { updatedAt: "desc" },
-        take: 10
+        take: 5
       }),
       db.equipmentRequest.findMany({
         where: { createdAt: { gte: weekAgo } },
-        include: { requester: { select: { name: true, image: true } } },
+        select: {
+          id: true,
+          equipmentType: true,
+          status: true,
+          createdAt: true,
+          requester: { select: { name: true, image: true } }
+        },
         orderBy: { createdAt: "desc" },
-        take: 10
+        take: 5
       }),
       db.requestHistory.findMany({
         where: { createdAt: { gte: weekAgo } },
-        include: { user: { select: { name: true, image: true } } },
+        select: {
+          id: true,
+          action: true,
+          createdAt: true,
+          user: { select: { name: true, image: true } }
+        },
         orderBy: { createdAt: "desc" },
-        take: 10
+        take: 5
       })
     ]);
 
@@ -142,7 +160,7 @@ export default async function DashboardPage() {
         title: `${eq.name}`,
         description: `Equipment ${eq.status.replace('_', ' ')}`,
         timestamp: eq.updatedAt,
-        user: eq.assignedTo ? { name: eq.assignedTo.name } : undefined
+        user: eq.currentOwner ? { name: eq.currentOwner.name } : undefined
       })),
       ...recentRequests.map(req => ({
         id: req.id,

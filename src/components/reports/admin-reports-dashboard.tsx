@@ -149,7 +149,7 @@ export function AdminReportsDashboard() {
   
   // Filter states
   const [reportType, setReportType] = useState("inventory");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("");
   const [teamFilter, setTeamFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -181,7 +181,7 @@ export function AdminReportsDashboard() {
       
       const params = new URLSearchParams();
       if (reportType) params.append("type", reportType);
-      if (category) params.append("category", category);
+      if (category && category !== "all") params.append("category", category);
       if (status) params.append("status", status);
       if (teamFilter) params.append("team", teamFilter);
       if (dateFrom) params.append("dateFrom", dateFrom);
@@ -398,7 +398,7 @@ export function AdminReportsDashboard() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}

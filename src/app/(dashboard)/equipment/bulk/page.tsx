@@ -4,7 +4,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { auth } from "@/lib/auth";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,13 +57,36 @@ interface BulkStats {
 
 export default function EquipmentBulkPage() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const { data: session, status } = useSession();
   const [equipment, setEquipment] = useState<EquipmentWithOwner[]>([]);
   const [filteredEquipment, setFilteredEquipment] = useState<EquipmentWithOwner[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<BulkStats | null>(null);
+
+  // Helper function to get effective session (including dev mode)
+  const getEffectiveSession = () => {
+    const isDev = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEVELOPMENT === 'true';
+    
+    if (session) {
+      return session;
+    }
+    
+    if (isDev) {
+      return {
+        user: {
+          id: "dev-admin-user-001",
+          email: "dev-admin@profico.com", 
+          name: "Development Admin",
+          role: "admin" as const
+        },
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      };
+    }
+    
+    return null;
+  };
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,26 +97,36 @@ export default function EquipmentBulkPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const sessionData = await auth();
-        setSession(sessionData);
-
-        if (!sessionData) {
+        if (status === "loading") return;
+        
+        // Check if we're in development mode
+        const isDev = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEVELOPMENT === 'true';
+        
+        if (!session && !isDev) {
           router.push("/auth/signin");
           return;
         }
 
+        const effectiveSession = getEffectiveSession();
+
         // Check permissions
-        if (sessionData.user.role !== "admin" && sessionData.user.role !== "team_lead") {
+        if (effectiveSession?.user?.role !== "admin" && effectiveSession?.user?.role !== "team_lead") {
           router.push("/dashboard");
           return;
         }
 
         // Fetch equipment
-        const equipmentResponse = await fetch("/api/equipment");
+        const equipmentResponse = await fetch("/api/equipment?limit=1000"); // Get all for bulk operations
         if (equipmentResponse.ok) {
-          const equipmentData = await equipmentResponse.json();
-          setEquipment(equipmentData);
-          setFilteredEquipment(equipmentData);
+          const responseData = await equipmentResponse.json();
+          // API returns { equipment: [...], pagination: {...} }
+          const equipmentArray = Array.isArray(responseData.equipment) ? responseData.equipment : [];
+          setEquipment(equipmentArray);
+          setFilteredEquipment(equipmentArray);
+        } else {
+          console.error("Failed to fetch equipment:", equipmentResponse.statusText);
+          setEquipment([]);
+          setFilteredEquipment([]);
         }
 
         // Fetch users for assignment
@@ -111,7 +144,7 @@ export default function EquipmentBulkPage() {
     };
 
     fetchData();
-  }, [router]);
+  }, [session, status, router]);
 
   // Update stats when equipment or selection changes
   useEffect(() => {
@@ -175,17 +208,18 @@ export default function EquipmentBulkPage() {
 
   const refreshData = async () => {
     try {
-      const response = await fetch("/api/equipment");
+      const response = await fetch("/api/equipment?limit=1000");
       if (response.ok) {
-        const data = await response.json();
-        setEquipment(data);
+        const responseData = await response.json();
+        const equipmentArray = Array.isArray(responseData.equipment) ? responseData.equipment : [];
+        setEquipment(equipmentArray);
       }
     } catch (error) {
       console.error("Error refreshing data:", error);
     }
   };
 
-  const categories = Array.from(new Set(equipment.map(eq => eq.category)));
+  const categories = Array.from(new Set((equipment || []).map(eq => eq.category)));
   const statusOptions = [
     { value: "available", label: "Available" },
     { value: "assigned", label: "Assigned" },
@@ -194,7 +228,7 @@ export default function EquipmentBulkPage() {
     { value: "decommissioned", label: "Decommissioned" },
   ];
 
-  if (loading) {
+  if (loading || status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -202,11 +236,13 @@ export default function EquipmentBulkPage() {
     );
   }
 
-  if (!session) {
+  const effectiveSession = getEffectiveSession();
+
+  if (!effectiveSession) {
     return null;
   }
 
-  const canPerformBulkOperations = session.user.role === "admin" || session.user.role === "team_lead";
+  const canPerformBulkOperations = effectiveSession.user.role === "admin" || effectiveSession.user.role === "team_lead";
 
   if (!canPerformBulkOperations) {
     return (
@@ -315,7 +351,7 @@ export default function EquipmentBulkPage() {
             refreshData();
           }}
           users={users}
-          userRole={session.user.role}
+          userRole={effectiveSession.user.role}
         />
 
         {/* Main Content */}
@@ -447,8 +483,8 @@ export default function EquipmentBulkPage() {
                   equipment={filteredEquipment}
                   currentPage={1}
                   totalPages={1}
-                  userRole={session.user.role}
-                  userId={session.user.id}
+                  userRole={effectiveSession.user.role}
+                  userId={effectiveSession.user.id}
                   selectedItems={selectedEquipment}
                   onSelectionChange={handleSelectionChange}
                   showBulkActions={false}

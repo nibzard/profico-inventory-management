@@ -3,6 +3,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -18,6 +19,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Menu, User, Settings, Bell } from "lucide-react";
 import Link from "next/link";
+import { useNotifications } from "@/hooks/use-notifications";
+import { NotificationDetailModal, type Notification } from "@/components/notifications/notification-detail-modal";
+import { formatDistanceToNow } from "date-fns";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -27,6 +31,28 @@ interface HeaderProps {
 export function Header({ onMenuToggle, showMenuButton = true }: HeaderProps) {
   const { data: session } = useSession();
   const user = session?.user;
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  const { 
+    notifications, 
+    isLoading, 
+    markAsRead, 
+    markAllAsRead, 
+    unreadCount, 
+    hasUnread 
+  } = useNotifications();
+
+  const handleNotificationClick = (notification: Notification) => {
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
+    setIsNotificationOpen(false);
+  };
+
+  const handleMarkAsRead = (notificationId: string) => {
+    markAsRead(notificationId);
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4 sticky top-0 z-40">
@@ -52,13 +78,94 @@ export function Header({ onMenuToggle, showMenuButton = true }: HeaderProps) {
         <div className="flex items-center space-x-4">
           <PWAInstallPrompt />
           
-          {/* Notifications placeholder */}
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              2
-            </span>
-          </Button>
+          {/* Notifications */}
+          <DropdownMenu open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="h-5 w-5" />
+                {hasUnread && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <div className="p-2">
+                <h3 className="font-semibold text-sm mb-2">Notifications</h3>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {isLoading ? (
+                    <div className="p-4 text-center text-sm text-gray-500">
+                      Loading notifications...
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-gray-500">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((notification) => {
+                      const getBgColor = () => {
+                        switch (notification.type) {
+                          case "request_approved":
+                            return "bg-green-50 border-green-200";
+                          case "request_rejected":
+                            return "bg-red-50 border-red-200";
+                          case "maintenance_due":
+                            return "bg-yellow-50 border-yellow-200";
+                          case "equipment_assigned":
+                            return "bg-blue-50 border-blue-200";
+                          default:
+                            return "bg-gray-50 border-gray-200";
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={notification.id}
+                          className={`p-2 rounded-md border cursor-pointer hover:bg-opacity-80 transition-colors ${getBgColor()} ${
+                            !notification.read ? 'ring-1 ring-blue-200' : ''
+                          }`}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-1">
+                                <p className="text-sm font-medium">{notification.title}</p>
+                                {!notification.read && (
+                                  <Badge variant="secondary" className="text-xs px-1 py-0">
+                                    New
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                <DropdownMenuSeparator className="my-2" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full text-sm"
+                  onClick={() => {
+                    markAllAsRead();
+                    setIsNotificationOpen(false);
+                  }}
+                  disabled={!hasUnread}
+                >
+                  Mark all as read
+                </Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {user && (
             <DropdownMenu>
@@ -112,6 +219,14 @@ export function Header({ onMenuToggle, showMenuButton = true }: HeaderProps) {
           )}
         </div>
       </div>
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        onMarkAsRead={handleMarkAsRead}
+      />
     </header>
   );
 }

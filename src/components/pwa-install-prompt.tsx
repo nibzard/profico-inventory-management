@@ -33,9 +33,10 @@ export default function PWAInstallPrompt() {
     }
 
     const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+      console.log('beforeinstallprompt event fired');
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstallPrompt(true);
+      // Don't auto-show prompt, wait for user to click button
     };
 
     const handleAppInstalled = () => {
@@ -53,20 +54,29 @@ export default function PWAInstallPrompt() {
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      // Fallback for browsers that don't support beforeinstallprompt
+      // Show manual installation instructions
+      alert('To install this app:\n\nChrome/Edge: Click the three dots menu → "Install ProfiCo Inventory"\n\nSafari: Click Share button → "Add to Home Screen"\n\nFirefox: Look for the install icon in the address bar');
+      return;
+    }
 
     try {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       
+      console.log('Install outcome:', outcome);
+      
       if (outcome === 'accepted') {
         setIsInstalled(true);
+        setShowInstallPrompt(false);
       }
       
       setDeferredPrompt(null);
-      setShowInstallPrompt(false);
     } catch (error) {
       console.error('Error installing PWA:', error);
+      // Show fallback instructions
+      alert('Installation failed. Try manually:\n\nChrome/Edge: Three dots menu → "Install ProfiCo Inventory"\n\nSafari: Share → "Add to Home Screen"');
     }
   };
 
@@ -89,8 +99,14 @@ export default function PWAInstallPrompt() {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setShowInstallPrompt(true)}
-        className="hidden md:flex"
+        onClick={() => {
+          if (deferredPrompt) {
+            setShowInstallPrompt(true);
+          } else {
+            handleInstall(); // Show manual instructions immediately
+          }
+        }}
+        className="md:hidden flex"
       >
         <Download className="h-4 w-4 mr-2" />
         Install App

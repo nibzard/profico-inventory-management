@@ -40,6 +40,7 @@ interface NavItem {
   icon: React.ElementType;
   roles?: ("admin" | "team_lead" | "user")[];
   children?: NavItem[];
+  mobileOnly?: boolean;
 }
 
 export function Sidebar({ userRole = "user", isOpen = true, onClose }: SidebarProps) {
@@ -67,7 +68,7 @@ export function Sidebar({ userRole = "user", isOpen = true, onClose }: SidebarPr
       children: [
         { label: "All Equipment", href: "/equipment", icon: Package },
         { label: "Add Equipment", href: "/equipment/add", icon: Package, roles: ["admin", "team_lead"] },
-        { label: "QR Scanner", href: "/equipment/scanner", icon: ScanLine },
+        { label: "QR Scanner", href: "/equipment/scanner", icon: ScanLine, mobileOnly: true },
         { label: "Bulk Operations", href: "/equipment/bulk", icon: Settings, roles: ["admin", "team_lead"] },
       ]
     },
@@ -175,7 +176,8 @@ export function Sidebar({ userRole = "user", isOpen = true, onClose }: SidebarPr
         className={cn(
           "flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors",
           level > 0 && "pl-8 ml-6",
-          isCurrentActive && "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
+          isCurrentActive && "bg-blue-50 text-blue-700 border-r-2 border-blue-700",
+          item.mobileOnly && "md:hidden"
         )}
       >
         <item.icon className="h-5 w-5" />
@@ -199,7 +201,7 @@ export function Sidebar({ userRole = "user", isOpen = true, onClose }: SidebarPr
       {/* Footer with quick actions */}
       <div className="p-4 border-t border-gray-200">
         <div className="space-y-2">
-          <Button variant="outline" size="sm" className="w-full" asChild>
+          <Button variant="outline" size="sm" className="w-full md:hidden" asChild>
             <Link href="/equipment/scanner">
               <QrCode className="h-4 w-4 mr-2" />
               Quick Scan

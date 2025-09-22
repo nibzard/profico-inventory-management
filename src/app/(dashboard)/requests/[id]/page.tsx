@@ -79,7 +79,7 @@ export default async function RequestDetailPage({ params }: PageProps) {
           name: true,
           serialNumber: true,
           status: true,
-          assignedTo: {
+          currentOwner: {
             select: { name: true, email: true }
           }
         },
@@ -379,11 +379,11 @@ export default async function RequestDetailPage({ params }: PageProps) {
                     Status: {request.equipment.status.replace("_", " ").toUpperCase()}
                   </p>
                 </div>
-                {request.equipment.assignedTo && (
+                {request.equipment.currentOwner && (
                   <div className="text-right">
                     <p className="text-sm font-medium">Assigned to:</p>
                     <p className="text-sm text-gray-600">
-                      {request.equipment.assignedTo.name}
+                      {request.equipment.currentOwner.name}
                     </p>
                   </div>
                 )}

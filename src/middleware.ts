@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
   const adminRoutes = ["/admin"];
 
   // Team lead and admin routes
-  const managerRoutes = ["/requests/approve", "/equipment/assign"];
+  const managerRoutes = ["/requests/approve", "/equipment/assign", "/equipment/bulk"];
 
   // Check if the current path is public
   const isPublicRoute = publicRoutes.some((route) =>

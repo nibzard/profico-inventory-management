@@ -4,7 +4,7 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
-import { ensureDevelopmentUser } from "@/lib/dev-auth";
+import { ensureDevelopmentUser, isDevelopmentBypassEnabled } from "@/lib/dev-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,11 +39,30 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
   // Ensure development user exists in development mode
   await ensureDevelopmentUser(db);
   
-  const session = await auth();
+  // Get session with retry logic for development mode
+  let session;
+  let retryCount = 0;
+  const maxRetries = 3;
   
-  // Since middleware handles authentication, we should always have a session here
-  // If we somehow don't have one, redirect to signin
-  if (!session?.user) {
+  while (retryCount < maxRetries) {
+    session = await auth();
+    
+    // If we have a session with user, we're good
+    if (session?.user) {
+      break;
+    }
+    
+    // In development mode, wait a bit and retry
+    if (isDevelopmentBypassEnabled()) {
+      retryCount++;
+      if (retryCount < maxRetries) {
+        // Small delay to allow session to be established
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+    }
+    
+    // If no session after retries or not in development, redirect
     redirect("/auth/signin");
   }
 
@@ -79,7 +98,8 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
     });
     } catch (error) {
     console.error("Error fetching equipment:", error);
-    throw error;
+    // In case of database error, redirect to equipment list with error message
+    redirect("/equipment?error=fetch-failed");
   }
 
   if (!equipment) {

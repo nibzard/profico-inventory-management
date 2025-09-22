@@ -94,7 +94,7 @@ export function Sidebar({ userRole = "user", isOpen = true, onClose }: SidebarPr
     },
     { 
       label: "Reports", 
-      href: "/reports", 
+      href: "/admin/reports", 
       icon: BarChart3,
       roles: ["admin", "team_lead"] 
     },

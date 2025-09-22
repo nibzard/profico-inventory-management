@@ -189,8 +189,7 @@ export function Sidebar({ userRole = "user", isOpen = true, onClose }: SidebarPr
       className={cn(
         "bg-white border-r border-gray-200 transition-all duration-300 ease-in-out",
         "w-64 min-h-screen flex flex-col",
-        "md:relative md:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        "h-full"
       )}
     >
       <nav className="flex-1 p-4 space-y-2">

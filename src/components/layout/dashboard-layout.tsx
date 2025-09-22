@@ -38,10 +38,10 @@ export function DashboardLayout({
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 md:z-30",
+        "fixed inset-y-0 left-0 z-50",
+        "md:fixed md:z-30",
         "transition-transform duration-300 ease-in-out",
-        "md:relative md:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <Sidebar 
           userRole={userRole} 
@@ -51,7 +51,7 @@ export function DashboardLayout({
       </div>
 
       {/* Main content area */}
-      <div className="md:ml-64">
+      <div className="ml-0 md:ml-64">
         {/* Header */}
         <Header onMenuToggle={toggleSidebar} />
 

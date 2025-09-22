@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
+import { ensureDevelopmentUser } from "@/lib/dev-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,12 +36,15 @@ interface EquipmentDetailPageProps {
 }
 
 export default async function EquipmentDetailPage({ params }: EquipmentDetailPageProps) {
+  // Ensure development user exists in development mode
+  await ensureDevelopmentUser(db);
+  
   const session = await auth();
   
-  // If no session, the middleware should have handled the redirect
-  // This is just a safety check - the real protection is in middleware
+  // If no session, redirect to signin page
+  // The middleware should handle this, but this is a safety check
   if (!session?.user) {
-    redirect("/dashboard");
+    redirect("/auth/signin");
   }
 
   const { id } = await params;

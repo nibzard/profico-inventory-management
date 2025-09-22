@@ -41,8 +41,8 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
   
   const session = await auth();
   
-  // If no session, redirect to signin page
-  // The middleware should handle this, but this is a safety check
+  // Since middleware handles authentication, we should always have a session here
+  // If we somehow don't have one, redirect to signin
   if (!session?.user) {
     redirect("/auth/signin");
   }
@@ -51,30 +51,36 @@ export default async function EquipmentDetailPage({ params }: EquipmentDetailPag
   const { user } = session;
 
   // Fetch equipment data
-  const equipment = await db.equipment.findUnique({
-    where: { id },
-    include: {
-      currentOwner: {
-        select: { id: true, name: true, email: true, image: true },
-      },
-      maintenanceRecords: {
-        orderBy: { date: "desc" },
-        take: 3,
-      },
-      history: {
-        include: {
-          fromUser: {
-            select: { id: true, name: true, image: true },
-          },
-          toUser: {
-            select: { id: true, name: true, image: true },
-          },
+  let equipment;
+  try {
+    equipment = await db.equipment.findUnique({
+      where: { id },
+      include: {
+        currentOwner: {
+          select: { id: true, name: true, email: true, image: true },
         },
-        orderBy: { createdAt: "desc" },
-        take: 5,
+        maintenanceRecords: {
+          orderBy: { date: "desc" },
+          take: 3,
+        },
+        history: {
+          include: {
+            fromUser: {
+              select: { id: true, name: true, image: true },
+            },
+            toUser: {
+              select: { id: true, name: true, image: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
       },
-    },
-  });
+    });
+    } catch (error) {
+    console.error("Error fetching equipment:", error);
+    throw error;
+  }
 
   if (!equipment) {
     notFound();

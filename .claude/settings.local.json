@@ -6,7 +6,8 @@
       "Bash(gh repo create:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

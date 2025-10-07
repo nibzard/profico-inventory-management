@@ -4,11 +4,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { isDevelopmentBypassEnabled, getDevelopmentSession } from "@/lib/dev-auth";
+import {
+  isDevelopmentBypassEnabled,
+  getDevelopmentSession,
+} from "@/lib/dev-auth";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  
+
   // Get session from NextAuth or use development bypass
   let session;
   if (isDevelopmentBypassEnabled()) {
@@ -25,7 +28,11 @@ export async function middleware(req: NextRequest) {
   const adminRoutes = ["/admin"];
 
   // Team lead and admin routes
-  const managerRoutes = ["/requests/approve", "/equipment/assign", "/equipment/bulk"];
+  const managerRoutes = [
+    "/requests/approve",
+    "/equipment/assign",
+    "/equipment/bulk",
+  ];
 
   // Check if the current path is public
   const isPublicRoute = publicRoutes.some((route) =>
@@ -39,7 +46,11 @@ export async function middleware(req: NextRequest) {
 
   // If authenticated and trying to access auth pages, redirect to dashboard
   // Exception: in development mode, allow access to auth pages for testing
-  if (session && pathname.startsWith("/auth") && !isDevelopmentBypassEnabled()) {
+  if (
+    session &&
+    pathname.startsWith("/auth") &&
+    !isDevelopmentBypassEnabled()
+  ) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
@@ -76,4 +87,5 @@ export const config = {
      */
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
+  runtime: "nodejs",
 };
